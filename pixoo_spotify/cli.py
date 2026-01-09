@@ -174,8 +174,12 @@ def auth(
 ) -> None:
     config_path = resolve_pixoo_spotify_config_path(PIXOO_SPOTIFY_CONFIG_PATH)
     if auth_files_exist(config_path) and not reauth:
+        auth_dir = resolve_pixoo_spotify_config_path(config_path)
+        auth_client_path = auth_dir / "auth_spotify_client.json"
+        token_path = auth_dir / "spotify_token.json"
         typer.echo(
             "Auth files already exist at the config path. "
+            f"Files: {auth_client_path}, {token_path}. "
             "If you want to re-authenticate, run: pixoo-spotify auth --reauth",
             err=True,
         )
