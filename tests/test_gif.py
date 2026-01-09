@@ -95,3 +95,8 @@ def test_compute_scroll_offset_bounce_with_pause() -> None:
         for idx in range(6)
     ]
     assert offsets == [0, 0, -1, -2, -2, -1]
+
+
+def test_overlay_rgba_skips_when_alpha_ff() -> None:
+    config = GifConfig(overlay_color="#112233FF")
+    assert config.overlay_rgba() is None

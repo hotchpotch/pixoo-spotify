@@ -58,6 +58,7 @@ class GifConfig(BaseModel):
     max_chars: int = Field(40, ge=1, le=80)
     output_path: Path = Path("output/latest.gif")
     background_color: tuple[int, int, int] = (120, 120, 120)
+    overlay_color: str | None = "#00000078"
     overlay_opacity: int = Field(120, ge=0, le=255)
     scroll_px_per_frame: int = Field(1, ge=1, le=10)
     spacer_px: int = Field(8, ge=0, le=64)
@@ -79,6 +80,36 @@ class GifConfig(BaseModel):
         if self.image_size > self.size:
             raise ValueError("image_size must be less than or equal to size")
         return self
+
+    @field_validator("overlay_color")
+    @classmethod
+    def validate_overlay_color(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        text = value.strip()
+        if text.startswith("#"):
+            text = text[1:]
+        if len(text) != 8:
+            raise ValueError("overlay_color must be in #RRGGBBAA format")
+        try:
+            int(text, 16)
+        except ValueError as exc:
+            raise ValueError("overlay_color must be valid hex") from exc
+        return f"#{text.lower()}"
+
+    def overlay_rgba(self) -> tuple[int, int, int, int] | None:
+        if self.overlay_color:
+            text = self.overlay_color.lstrip("#")
+            r = int(text[0:2], 16)
+            g = int(text[2:4], 16)
+            b = int(text[4:6], 16)
+            a = int(text[6:8], 16)
+            if a == 0xFF:
+                return None
+            return (r, g, b, a)
+        if self.overlay_opacity >= 255:
+            return None
+        return (0, 0, 0, self.overlay_opacity)
 
 
 class UiConfig(BaseModel):

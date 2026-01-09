@@ -187,13 +187,14 @@ def build_frames(
     frames: list[Image.Image] = []
     for frame_index in range(total_frames):
         frame = background.copy().convert("RGBA")
-        if config.overlay_opacity > 0:
+        overlay_rgba = config.overlay_rgba()
+        if overlay_rgba is not None:
             overlay = Image.new("RGBA", (size, size), (0, 0, 0, 0))
             overlay_draw = ImageDraw.Draw(overlay)
             overlay_top = max(0, origin_y - 1)
             overlay_draw.rectangle(
                 (0, overlay_top, size, size),
-                fill=(0, 0, 0, config.overlay_opacity),
+                fill=overlay_rgba,
             )
             frame = Image.alpha_composite(frame, overlay)
 
