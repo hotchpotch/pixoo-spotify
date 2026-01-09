@@ -176,9 +176,11 @@ def auth(
     if auth_files_exist(config_path) and not reauth:
         auth_client_path, token_path = get_auth_paths(config_path)
         typer.echo(
-            "Auth files already exist at the config path. "
-            f"Files: {auth_client_path}, {token_path}. "
-            "If you want to re-authenticate, run: pixoo-spotify auth --reauth",
+            "Auth files already exist at the config path.\n"
+            f"- {auth_client_path}\n"
+            f"- {token_path}\n"
+            "If you want to re-authenticate, run:\n"
+            "  pixoo-spotify auth --reauth",
             err=True,
         )
         raise typer.Exit(code=1)
