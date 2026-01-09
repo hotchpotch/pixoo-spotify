@@ -157,6 +157,7 @@ def build_frames(
     available_width = size - config.margin * 2
     widths = [width for _, width, _ in line_metrics]
     overflow_flags = [width > available_width for width in widths]
+    direction = 1 if config.position in (TextPosition.bottom_right, TextPosition.top_right) else -1
 
     shared_cycle: int | None = None
     shared_width: int | None = None
@@ -215,6 +216,7 @@ def build_frames(
                     available_width=available_width,
                     text_width=shared_width,
                     scroll_range=shared_range,
+                    direction=direction,
                 )
                 x = base_origin_x + align_offset + offset
             else:
@@ -228,6 +230,7 @@ def build_frames(
                     available_width=available_width,
                     text_width=width,
                     scroll_range=None,
+                    direction=direction,
                 )
                 x = origin_x + offset
             y = origin_y + idx * line_height
@@ -297,6 +300,7 @@ def compute_scroll_offset(
     available_width: int,
     text_width: int,
     scroll_range: int | None,
+    direction: int,
 ) -> int:
     if cycle <= 1:
         return 0
@@ -310,7 +314,7 @@ def compute_scroll_offset(
         pos = step % path
         if pos > scroll_range:
             pos = path - pos
-        return -int(pos)
+        return int(pos) * direction
     return -int(step % cycle)
 
 
