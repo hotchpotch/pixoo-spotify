@@ -12,19 +12,19 @@ from spotipy.exceptions import SpotifyException
 from pixoo_spotify.config import SpotifyConfig
 from pixoo_spotify.models import TrackInfo
 
-DOT_CONFIG_APP_NAME = "pixoo-spotify"
+PIXOO_SPOTIFY_CONFIG_APP_NAME = "pixoo-spotify"
 AUTH_CLIENT_FILE_NAME = "auth_spotify_client.json"
 SPOTIFY_TOKEN_FILE_NAME = "spotify_token.json"
 
 
-def resolve_dot_config_path(dot_config_path: Path | None = None) -> Path:
-    if dot_config_path is not None:
-        return dot_config_path
-    return Path(user_config_dir(DOT_CONFIG_APP_NAME))
+def resolve_pixoo_spotify_config_path(path: Path | None = None) -> Path:
+    if path is not None:
+        return path
+    return Path(user_config_dir(PIXOO_SPOTIFY_CONFIG_APP_NAME))
 
 
-def resolve_spotify_token_path(dot_config_path: Path | None = None) -> Path:
-    return resolve_dot_config_path(dot_config_path) / SPOTIFY_TOKEN_FILE_NAME
+def resolve_spotify_token_path(config_path: Path | None = None) -> Path:
+    return resolve_pixoo_spotify_config_path(config_path) / SPOTIFY_TOKEN_FILE_NAME
 
 class SpotifyClient:
     def __init__(self, config: SpotifyConfig):
@@ -76,8 +76,8 @@ def retry_after_seconds(exc: SpotifyException) -> float | None:
         return None
 
 
-def load_cached_client_id(dot_config_path: Path | None = None) -> str | None:
-    auth_path = resolve_dot_config_path(dot_config_path) / AUTH_CLIENT_FILE_NAME
+def load_cached_client_id(config_path: Path | None = None) -> str | None:
+    auth_path = resolve_pixoo_spotify_config_path(config_path) / AUTH_CLIENT_FILE_NAME
     if not auth_path.exists():
         return None
     try:
@@ -91,8 +91,8 @@ def load_cached_client_id(dot_config_path: Path | None = None) -> str | None:
     return None
 
 
-def save_client_id(client_id: str, dot_config_path: Path | None = None) -> Path:
-    auth_path = resolve_dot_config_path(dot_config_path) / AUTH_CLIENT_FILE_NAME
+def save_client_id(client_id: str, config_path: Path | None = None) -> Path:
+    auth_path = resolve_pixoo_spotify_config_path(config_path) / AUTH_CLIENT_FILE_NAME
     auth_path.parent.mkdir(parents=True, exist_ok=True)
     auth_path.write_text(json.dumps({"client_id": client_id}), encoding="utf-8")
     return auth_path
