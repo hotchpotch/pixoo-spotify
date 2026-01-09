@@ -3,9 +3,9 @@ from pixoo_spotify.config import ServerConfig, SpotifyConfig
 from pixoo_spotify.spotify import (
     SpotifyClient,
     auth_files_exist,
+    get_auth_paths,
     load_cached_client_id,
     resolve_pixoo_spotify_config_path,
-    resolve_spotify_token_path,
     retry_after_seconds,
     save_client_id,
 )
@@ -61,7 +61,8 @@ def test_client_id_cache_roundtrip(tmp_path) -> None:
 def test_resolve_config_paths(tmp_path) -> None:
     resolved = resolve_pixoo_spotify_config_path(tmp_path)
     assert resolved == tmp_path
-    token_path = resolve_spotify_token_path(tmp_path)
+    auth_path, token_path = get_auth_paths(tmp_path)
+    assert auth_path.name == "auth_spotify_client.json"
     assert token_path.name == "spotify_token.json"
 
 

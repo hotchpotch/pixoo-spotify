@@ -15,9 +15,9 @@ from pixoo_spotify.pixoo import discover_devices
 from pixoo_spotify.spotify import (
     SpotifyClient,
     auth_files_exist,
+    get_auth_paths,
     load_cached_client_id,
     resolve_pixoo_spotify_config_path,
-    resolve_spotify_token_path,
     save_client_id,
     validate_spotify_config,
 )
@@ -126,7 +126,7 @@ def run(
         )
         raise typer.Exit(code=1)
     if cache_path is None:
-        cache_path = resolve_spotify_token_path(config_path)
+        cache_path = get_auth_paths(config_path)[1]
     overrides = build_overrides(
         client_id=resolved_client_id,
         client_secret=client_secret,
@@ -174,9 +174,7 @@ def auth(
 ) -> None:
     config_path = resolve_pixoo_spotify_config_path(PIXOO_SPOTIFY_CONFIG_PATH)
     if auth_files_exist(config_path) and not reauth:
-        auth_dir = resolve_pixoo_spotify_config_path(config_path)
-        auth_client_path = auth_dir / "auth_spotify_client.json"
-        token_path = auth_dir / "spotify_token.json"
+        auth_client_path, token_path = get_auth_paths(config_path)
         typer.echo(
             "Auth files already exist at the config path. "
             f"Files: {auth_client_path}, {token_path}. "
@@ -186,7 +184,7 @@ def auth(
         raise typer.Exit(code=1)
     save_client_id(client_id, config_path)
     if cache_path is None:
-        cache_path = resolve_spotify_token_path(config_path)
+        cache_path = get_auth_paths(config_path)[1]
     overrides = build_overrides(
         client_id=client_id,
         client_secret=client_secret,

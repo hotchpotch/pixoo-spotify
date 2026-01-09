@@ -23,8 +23,13 @@ def resolve_pixoo_spotify_config_path(path: Path | None = None) -> Path:
     return Path(user_config_dir(PIXOO_SPOTIFY_CONFIG_APP_NAME))
 
 
+def get_auth_paths(config_path: Path | None = None) -> tuple[Path, Path]:
+    base_path = resolve_pixoo_spotify_config_path(config_path)
+    return (base_path / AUTH_CLIENT_FILE_NAME, base_path / SPOTIFY_TOKEN_FILE_NAME)
+
+
 def resolve_spotify_token_path(config_path: Path | None = None) -> Path:
-    return resolve_pixoo_spotify_config_path(config_path) / SPOTIFY_TOKEN_FILE_NAME
+    return get_auth_paths(config_path)[1]
 
 class SpotifyClient:
     def __init__(self, config: SpotifyConfig):
@@ -90,7 +95,7 @@ def retry_after_seconds(exc: SpotifyException) -> float | None:
 
 
 def load_cached_client_id(config_path: Path | None = None) -> str | None:
-    auth_path = resolve_pixoo_spotify_config_path(config_path) / AUTH_CLIENT_FILE_NAME
+    auth_path, _token_path = get_auth_paths(config_path)
     if not auth_path.exists():
         return None
     try:
@@ -105,14 +110,12 @@ def load_cached_client_id(config_path: Path | None = None) -> str | None:
 
 
 def save_client_id(client_id: str, config_path: Path | None = None) -> Path:
-    auth_path = resolve_pixoo_spotify_config_path(config_path) / AUTH_CLIENT_FILE_NAME
+    auth_path, _token_path = get_auth_paths(config_path)
     auth_path.parent.mkdir(parents=True, exist_ok=True)
     auth_path.write_text(json.dumps({"client_id": client_id}), encoding="utf-8")
     return auth_path
 
 
 def auth_files_exist(config_path: Path | None = None) -> bool:
-    base_path = resolve_pixoo_spotify_config_path(config_path)
-    return (base_path / AUTH_CLIENT_FILE_NAME).exists() or (
-        base_path / SPOTIFY_TOKEN_FILE_NAME
-    ).exists()
+    auth_path, token_path = get_auth_paths(config_path)
+    return auth_path.exists() or token_path.exists()
