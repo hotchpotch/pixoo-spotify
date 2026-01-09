@@ -316,16 +316,21 @@ def compute_scroll_offset(
         path = scroll_range * 2 + pause * 2
         pos = step % path
         if pos < pause:
-            return 0
-        pos -= pause
-        if pos <= scroll_range:
-            return int(pos) * direction
-        pos -= scroll_range
-        if pos < pause:
-            return int(scroll_range) * direction
-        pos -= pause
-        pos = scroll_range - pos
-        return int(pos) * direction
+            pos = 0
+        else:
+            pos -= pause
+            if pos <= scroll_range:
+                pos = pos
+            else:
+                pos -= scroll_range
+                if pos < pause:
+                    pos = scroll_range
+                else:
+                    pos -= pause
+                    pos = scroll_range - pos
+        if direction >= 0:
+            return int(scroll_range - pos)
+        return -int(pos)
     return -int(step % cycle)
 
 

@@ -76,7 +76,7 @@ def test_compute_scroll_offset_bounce() -> None:
         )
         for idx in range(5)
     ]
-    assert offsets_right == [0, 1, 2, 1, 0]
+    assert offsets_right == [2, 1, 0, 1, 2]
 
 
 def test_compute_scroll_offset_bounce_with_pause() -> None:
