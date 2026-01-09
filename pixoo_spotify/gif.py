@@ -190,8 +190,9 @@ def build_frames(
         if config.overlay_opacity > 0:
             overlay = Image.new("RGBA", (size, size), (0, 0, 0, 0))
             overlay_draw = ImageDraw.Draw(overlay)
+            overlay_top = max(0, origin_y - 1)
             overlay_draw.rectangle(
-                (0, origin_y, size, size),
+                (0, overlay_top, size, size),
                 fill=(0, 0, 0, config.overlay_opacity),
             )
             frame = Image.alpha_composite(frame, overlay)
