@@ -154,7 +154,8 @@ def build_frames(
     text_area_height = line_height * len(lines)
     origin_y = position_origin_y(config.position, size, text_area_height, config.margin)
 
-    available_width = size - config.margin * 2
+    margin_x = config.margin + (1 if config.scroll_mode == ScrollMode.bounce else 0)
+    available_width = size - margin_x * 2
     widths = [width for _, width, _ in line_metrics]
     overflow_flags = [width > available_width for width in widths]
     direction = 1 if config.position in (TextPosition.bottom_right, TextPosition.top_right) else -1
@@ -199,9 +200,7 @@ def build_frames(
         for idx, line in enumerate(lines):
             font, width, _height = line_metrics[idx]
             if shared_cycle and shared_width is not None:
-                base_origin_x = position_origin_x(
-                    config.position, size, shared_width, config.margin
-                )
+                base_origin_x = position_origin_x(config.position, size, shared_width, margin_x)
                 align_offset = (
                     shared_width - width
                     if config.position in (TextPosition.bottom_right, TextPosition.top_right)
@@ -221,7 +220,7 @@ def build_frames(
                 )
                 x = base_origin_x + align_offset + offset
             else:
-                origin_x = position_origin_x(config.position, size, width, config.margin)
+                origin_x = position_origin_x(config.position, size, width, margin_x)
                 cycle = cycles[idx]
                 offset = compute_scroll_offset(
                     frame_index=frame_index,
