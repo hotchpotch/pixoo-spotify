@@ -57,7 +57,7 @@ async def run_app(config: AppConfig) -> None:
                     if signature != last_signature:
                         artwork = await fetch_artwork(
                             str(track.artwork_url) if track.artwork_url else None,
-                            config.gif.size,
+                            config.gif.image_size or config.gif.size,
                         )
                         gif_bytes = build_gif_bytes(
                             track=track,
@@ -83,7 +83,8 @@ async def generate_gif_once(config: AppConfig, track: TrackInfo) -> Path:
     fonts_dir = Path("fonts")
     font_registry = await load_font_registry(default_font_config(), fonts_dir)
     artwork = await fetch_artwork(
-        str(track.artwork_url) if track.artwork_url else None, config.gif.size
+        str(track.artwork_url) if track.artwork_url else None,
+        config.gif.image_size or config.gif.size,
     )
     gif_bytes = build_gif_bytes(track=track, config=config.gif, fonts=font_registry, artwork=artwork)
     await asyncio.to_thread(gif_path.write_bytes, gif_bytes)

@@ -6,7 +6,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
 
 class TextPosition(str, Enum):
@@ -45,6 +45,7 @@ class ServerConfig(BaseModel):
 
 class GifConfig(BaseModel):
     size: int = Field(64, ge=16, le=64)
+    image_size: int | None = Field(None, ge=16, le=64)
     fps: int = Field(8, ge=1, le=60)
     position: TextPosition = TextPosition.bottom_right
     max_chars: int = Field(40, ge=1, le=80)
@@ -61,6 +62,16 @@ class GifConfig(BaseModel):
         if value not in (16, 32, 64):
             raise ValueError("size must be 16, 32, or 64")
         return value
+
+    @model_validator(mode="after")
+    def validate_image_size(self) -> GifConfig:
+        if self.image_size is None:
+            return self
+        if self.image_size not in (16, 32, 64):
+            raise ValueError("image_size must be 16, 32, or 64")
+        if self.image_size > self.size:
+            raise ValueError("image_size must be less than or equal to size")
+        return self
 
 
 class UiConfig(BaseModel):

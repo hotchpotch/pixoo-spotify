@@ -53,6 +53,7 @@ def build_overrides(**kwargs) -> dict:
         },
         "gif": {
             "size": kwargs.get("gif_size"),
+            "image_size": kwargs.get("image_size"),
             "fps": kwargs.get("gif_fps"),
             "position": kwargs.get("gif_position"),
             "output_path": kwargs.get("gif_output"),
@@ -81,6 +82,7 @@ def run(
     server_port: int | None = typer.Option(None),
     public_base_url: str | None = typer.Option(None),
     gif_size: int | None = typer.Option(None),
+    image_size: int | None = typer.Option(None, "--image-size"),
     gif_fps: int | None = typer.Option(None),
     gif_position: TextPosition | None = typer.Option(None),
     gif_output: Path | None = typer.Option(None),
@@ -102,6 +104,7 @@ def run(
         server_port=server_port,
         public_base_url=public_base_url,
         gif_size=gif_size,
+        image_size=image_size,
         gif_fps=gif_fps,
         gif_position=gif_position,
         gif_output=gif_output,
@@ -167,10 +170,13 @@ def devices() -> None:
 @app.command()
 def demo(
     output: Path = typer.Option(Path("output/demo.gif"), "--output"),
+    image_size: int | None = typer.Option(None, "--image-size"),
 ) -> None:
     async def _generate() -> None:
         config = AppConfig()
         config.gif.output_path = output
+        if image_size is not None:
+            config.gif = config.gif.model_copy(update={"image_size": image_size})
         track = dummy_track()
         fonts = await load_font_registry(default_font_config(), Path("fonts"))
         gif_bytes = build_gif_bytes(
@@ -193,10 +199,13 @@ def gif(
     album: str | None = typer.Option(None),
     artwork_url: str | None = typer.Option(None),
     output: Path = typer.Option(Path("output/manual.gif"), "--output"),
+    image_size: int | None = typer.Option(None, "--image-size"),
 ) -> None:
     async def _generate() -> None:
         config = AppConfig()
         config.gif.output_path = output
+        if image_size is not None:
+            config.gif = config.gif.model_copy(update={"image_size": image_size})
         track = TrackInfo(artist=artist, title=title, album=album, artwork_url=artwork_url)
         await generate_gif_once(config, track)
         typer.echo(f"saved: {output}")

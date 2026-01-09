@@ -135,8 +135,12 @@ def build_frames(
     artwork: Image.Image | None,
 ) -> list[Image.Image]:
     size = config.size
-    background = artwork or Image.new("RGB", (size, size), config.background_color)
-    background = background.resize((size, size), Image.Resampling.LANCZOS)
+    background = prepare_background(
+        artwork=artwork,
+        size=size,
+        image_size=config.image_size or size,
+        background_color=config.background_color,
+    )
 
     lines = [line[: config.max_chars] for line in track.lines]
 
@@ -227,3 +231,21 @@ def measure_text(font: FontType, text: str) -> tuple[int, int]:
     draw = ImageDraw.Draw(dummy)
     bbox = draw.textbbox((0, 0), text, font=font)
     return (int(bbox[2] - bbox[0]), int(bbox[3] - bbox[1]))
+
+
+def prepare_background(
+    artwork: Image.Image | None,
+    size: int,
+    image_size: int,
+    background_color: tuple[int, int, int],
+) -> Image.Image:
+    base_size = image_size
+    if artwork is None:
+        background = Image.new("RGB", (base_size, base_size), background_color)
+    else:
+        background = artwork.convert("RGB")
+        if background.size != (base_size, base_size):
+            background = background.resize((base_size, base_size), Image.Resampling.LANCZOS)
+    if base_size != size:
+        background = background.resize((size, size), Image.Resampling.NEAREST)
+    return background

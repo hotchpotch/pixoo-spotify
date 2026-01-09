@@ -3,7 +3,13 @@ from pathlib import Path
 
 from PIL import Image
 from pixoo_spotify.config import GifConfig
-from pixoo_spotify.gif import FontConfig, FontSpec, build_gif_bytes, load_font_registry
+from pixoo_spotify.gif import (
+    FontConfig,
+    FontSpec,
+    build_gif_bytes,
+    load_font_registry,
+    prepare_background,
+)
 from pixoo_spotify.models import TrackInfo
 
 
@@ -22,3 +28,17 @@ def test_gif_generation(tmp_path: Path) -> None:
     assert image.format == "GIF"
     assert image.size == (config.size, config.size)
     assert getattr(image, "n_frames", 1) >= 1
+
+
+def test_prepare_background_pixelates() -> None:
+    src_size = 16
+    dst_size = 32
+    artwork = Image.new("RGB", (src_size, src_size), (255, 0, 0))
+    background = prepare_background(
+        artwork=artwork,
+        size=dst_size,
+        image_size=src_size,
+        background_color=(0, 0, 0),
+    )
+    assert background.size == (dst_size, dst_size)
+    assert background.getpixel((0, 0)) == background.getpixel((1, 1))
