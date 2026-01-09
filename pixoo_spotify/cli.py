@@ -14,6 +14,7 @@ from pixoo_spotify.models import TrackInfo
 from pixoo_spotify.pixoo import discover_devices
 from pixoo_spotify.spotify import (
     SpotifyClient,
+    auth_files_exist,
     load_cached_client_id,
     resolve_pixoo_spotify_config_path,
     resolve_spotify_token_path,
@@ -169,8 +170,16 @@ def auth(
     scope: str | None = typer.Option(None),
     cache_path: Path | None = typer.Option(None),
     open_browser: bool = typer.Option(True, "--open-browser/--no-open-browser"),
+    reauth: bool = typer.Option(False, "--reauth"),
 ) -> None:
     config_path = resolve_pixoo_spotify_config_path(PIXOO_SPOTIFY_CONFIG_PATH)
+    if auth_files_exist(config_path) and not reauth:
+        typer.echo(
+            "Auth files already exist at the config path. "
+            "If you want to re-authenticate, run: pixoo-spotify auth --reauth",
+            err=True,
+        )
+        raise typer.Exit(code=1)
     save_client_id(client_id, config_path)
     if cache_path is None:
         cache_path = resolve_spotify_token_path(config_path)
@@ -198,7 +207,7 @@ def auth(
             err=True,
         )
         raise typer.Exit(code=1) from exc
-    typer.echo(f"取得に成功、認証ファイルを保存しました: {token_path}")
+    typer.echo(f"Authentication succeeded. Token saved to: {token_path}")
 
 
 @app.command()

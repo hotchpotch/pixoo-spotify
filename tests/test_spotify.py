@@ -2,6 +2,7 @@ import spotipy
 from pixoo_spotify.config import ServerConfig, SpotifyConfig
 from pixoo_spotify.spotify import (
     SpotifyClient,
+    auth_files_exist,
     load_cached_client_id,
     resolve_pixoo_spotify_config_path,
     resolve_spotify_token_path,
@@ -62,3 +63,9 @@ def test_resolve_config_paths(tmp_path) -> None:
     assert resolved == tmp_path
     token_path = resolve_spotify_token_path(tmp_path)
     assert token_path.name == "spotify_token.json"
+
+
+def test_auth_files_exist(tmp_path) -> None:
+    assert auth_files_exist(tmp_path) is False
+    save_client_id("client-123", tmp_path)
+    assert auth_files_exist(tmp_path) is True

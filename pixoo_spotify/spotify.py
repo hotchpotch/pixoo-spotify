@@ -109,3 +109,10 @@ def save_client_id(client_id: str, config_path: Path | None = None) -> Path:
     auth_path.parent.mkdir(parents=True, exist_ok=True)
     auth_path.write_text(json.dumps({"client_id": client_id}), encoding="utf-8")
     return auth_path
+
+
+def auth_files_exist(config_path: Path | None = None) -> bool:
+    base_path = resolve_pixoo_spotify_config_path(config_path)
+    return (base_path / AUTH_CLIENT_FILE_NAME).exists() or (
+        base_path / SPOTIFY_TOKEN_FILE_NAME
+    ).exists()
