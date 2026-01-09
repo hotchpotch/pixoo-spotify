@@ -5,6 +5,7 @@ from pathlib import Path
 
 import typer
 from dotenv import load_dotenv
+from spotipy.exceptions import SpotifyOauthError
 
 from pixoo_spotify.app import generate_gif_once, run_app
 from pixoo_spotify.config import AppConfig, TextPosition
@@ -16,7 +17,11 @@ from pixoo_spotify.spotify import SpotifyClient, validate_spotify_config
 
 load_dotenv()
 
-app = typer.Typer(add_completion=False)
+app = typer.Typer(
+    add_completion=False,
+    pretty_exceptions_enable=False,
+    pretty_exceptions_show_locals=False,
+)
 
 
 def resolve_config(config_path: Path | None, overrides: dict) -> AppConfig:
@@ -131,7 +136,19 @@ def auth(
     config_obj = resolve_config(config, overrides)
     validate_spotify_config(config_obj.spotify)
     client = SpotifyClient(config_obj.spotify)
-    client.authorize_interactive()
+    try:
+        client.authorize_interactive()
+    except SpotifyOauthError as exc:
+        message = str(exc)
+        if exc.error_description:
+            message = f"{message}\n{exc.error_description}"
+        typer.echo("Spotify OAuth error:\n" + message, err=True)
+        typer.echo(
+            "Check that the Redirect URI is registered exactly in the Spotify dashboard "
+            f"(current: {config_obj.spotify.redirect_uri}).",
+            err=True,
+        )
+        raise typer.Exit(code=1) from exc
 
 
 @app.command()

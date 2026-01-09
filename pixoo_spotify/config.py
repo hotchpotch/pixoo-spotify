@@ -100,10 +100,25 @@ def load_config_file(path: Path) -> dict[str, Any]:
 def merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     merged = dict(base)
     for key, value in override.items():
-        if value is None:
+        value = _strip_none(value)
+        if value is None or (isinstance(value, dict) and not value):
             continue
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
             merged[key] = merge_dicts(merged[key], value)
         else:
             merged[key] = value
     return merged
+
+
+def _strip_none(value: Any) -> Any:
+    if isinstance(value, dict):
+        cleaned: dict[str, Any] = {}
+        for key, item in value.items():
+            stripped = _strip_none(item)
+            if stripped is None:
+                continue
+            if isinstance(stripped, dict) and not stripped:
+                continue
+            cleaned[key] = stripped
+        return cleaned
+    return value
