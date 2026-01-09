@@ -38,9 +38,9 @@ class ServerConfig(BaseModel):
 
     def base_url(self) -> str:
         if self.public_base_url:
-            return str(self.public_base_url)
+            return str(self.public_base_url).rstrip("/")
         host = "localhost" if self.host == "0.0.0.0" else self.host
-        return f"http://{host}:{self.port}"
+        return f"http://{host}:{self.port}".rstrip("/")
 
 
 class GifConfig(BaseModel):

@@ -67,7 +67,7 @@ async def run_app(config: AppConfig) -> None:
                         )
                         await asyncio.to_thread(gif_path.write_bytes, gif_bytes)
                         if config.pixoo.play_on_device and device_ip:
-                            await play_gif(client, device_ip, f"{base_url}/gif")
+                            await play_gif(client, device_ip, f"{base_url.rstrip('/')}/gif")
                         if not config.ui.background:
                             render_track(track)
                         last_signature = signature
