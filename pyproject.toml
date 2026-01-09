@@ -4,4 +4,97 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "fastapi>=0.128.0",
+    "httpx>=0.28.1",
+    "langdetect>=1.0.9",
+    "pillow>=12.1.0",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
+    "rich>=14.2.0",
+    "spotipy>=2.25.2",
+    "typer>=0.21.1",
+    "uvicorn>=0.40.0",
+]
+
+[project.scripts]
+pixoo-spotify = "pixoo_spotify.cli:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["pixoo_spotify*"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "pytest-xdist>=3.8.0",
+    "ruff>=0.14.11",
+    "ty>=0.0.10",
+    "tox-uv>=1.29.0",
+    "tox>=4.34.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers"
+markers = [
+    "slow: marks tests as slow",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 99
+fix = true
+src = ["pixoo_spotify", "tests"]
+extend-exclude = [
+    ".tox",
+    ".venv",
+    "venv",
+    "**/.mypy_cache",
+    "**/.pytest_cache",
+]
+include = ["**/*.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = [
+    "E203", # Whitespace before ':'
+    "E501", # Line too long (82 > 79 characters)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ty.environment]
+python-version = "3.12"
+python-platform = "linux"
+
+[tool.ty.src]
+exclude = [
+    ".tox",
+    ".venv",
+    "venv",
+    "**/__pycache__/**",
+]
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+requires = tox-uv>=1.29.0
+parallel = auto
+parallel_show_output = true
+env_list = py312, lint, type
+
+[testenv]
+commands = uv run --extra dev pytest -n auto {posargs}
+
+[testenv:lint]
+commands = uv run --extra dev ruff check .
+
+[testenv:type]
+commands = uv run --extra dev ty check
+"""
