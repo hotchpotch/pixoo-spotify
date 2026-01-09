@@ -48,7 +48,19 @@ class SpotifyClient:
             return None
 
     def authorize_interactive(self) -> None:
-        token = self._auth_manager.get_access_token()
+        if not self._config.open_browser:
+            url = self._auth_manager.get_authorize_url()
+            print("Go to the following URL and authorize the app:")
+            print(url)
+            redirect = input("Enter the URL you were redirected to: ").strip()
+            if not redirect:
+                raise RuntimeError("No redirect URL provided.")
+            _state, code = self._auth_manager.parse_auth_response_url(redirect)
+            if not code:
+                raise RuntimeError("Failed to parse authorization code.")
+            token = self._auth_manager.get_access_token(code=code)
+        else:
+            token = self._auth_manager.get_access_token()
         if not token:
             raise RuntimeError("Failed to fetch access token.")
 
