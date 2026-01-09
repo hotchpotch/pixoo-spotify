@@ -186,7 +186,7 @@ def auth(
     validate_spotify_config(config_obj.spotify)
     client = SpotifyClient(config_obj.spotify)
     try:
-        client.authorize_interactive()
+        token_path = client.authorize_interactive()
     except SpotifyOauthError as exc:
         message = str(exc)
         if exc.error_description:
@@ -198,6 +198,7 @@ def auth(
             err=True,
         )
         raise typer.Exit(code=1) from exc
+    typer.echo(f"取得に成功、認証ファイルを保存しました: {token_path}")
 
 
 @app.command()

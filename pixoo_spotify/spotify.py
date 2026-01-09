@@ -47,7 +47,7 @@ class SpotifyClient:
         except ValidationError:
             return None
 
-    def authorize_interactive(self) -> None:
+    def authorize_interactive(self) -> str:
         if not self._config.open_browser:
             url = self._auth_manager.get_authorize_url()
             print("Go to the following URL and authorize the app:")
@@ -63,6 +63,7 @@ class SpotifyClient:
             token = self._auth_manager.get_access_token()
         if not token:
             raise RuntimeError("Failed to fetch access token.")
+        return str(self._config.cache_path)
 
 
 def validate_spotify_config(config: SpotifyConfig) -> None:
