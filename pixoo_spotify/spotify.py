@@ -5,6 +5,7 @@ from pathlib import Path
 
 import spotipy
 from pydantic import ValidationError
+from spotipy.exceptions import SpotifyException
 
 from pixoo_spotify.config import SpotifyConfig
 from pixoo_spotify.models import TrackInfo
@@ -48,3 +49,13 @@ def validate_spotify_config(config: SpotifyConfig) -> None:
     ]
     if missing:
         raise ValueError(f"Missing Spotify configuration: {', '.join(missing)}")
+
+
+def retry_after_seconds(exc: SpotifyException) -> float | None:
+    header = exc.headers.get("Retry-After") or exc.headers.get("retry-after")
+    if not header:
+        return None
+    try:
+        return float(header)
+    except ValueError:
+        return None

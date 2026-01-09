@@ -5,6 +5,7 @@ from pathlib import Path
 
 import httpx
 import uvicorn
+from spotipy.exceptions import SpotifyException
 
 from pixoo_spotify.config import AppConfig
 from pixoo_spotify.gif import (
@@ -16,7 +17,7 @@ from pixoo_spotify.gif import (
 from pixoo_spotify.models import TrackInfo
 from pixoo_spotify.pixoo import discover_devices, play_gif
 from pixoo_spotify.server import create_app
-from pixoo_spotify.spotify import SpotifyClient, validate_spotify_config
+from pixoo_spotify.spotify import SpotifyClient, retry_after_seconds, validate_spotify_config
 from pixoo_spotify.ui import render_track
 
 
@@ -51,7 +52,14 @@ async def run_app(config: AppConfig) -> None:
         last_signature: str | None = None
         try:
             while not server.should_exit:
-                track = await spotify.current_track()
+                try:
+                    track = await spotify.current_track()
+                except SpotifyException as exc:
+                    if exc.http_status == 429:
+                        retry_after = retry_after_seconds(exc) or config.poll_interval
+                        await asyncio.sleep(retry_after)
+                        continue
+                    raise
                 if track and track.is_playing:
                     signature = f"{track.id}:{track.title}:{track.artist}"
                     if signature != last_signature:
