@@ -9,7 +9,7 @@ from langdetect import DetectorFactory, detect_langs
 from PIL import Image, ImageDraw, ImageFont
 from pydantic import BaseModel, Field
 
-from pixoo_spotify.config import GifConfig, TextPosition
+from pixoo_spotify.config import GifConfig, ScrollMode, TextPosition
 from pixoo_spotify.fonts import MISAKI_GOTHIC_URL, ensure_font_file
 from pixoo_spotify.models import TrackInfo
 
@@ -160,14 +160,23 @@ def build_frames(
 
     shared_cycle: int | None = None
     shared_width: int | None = None
+    shared_range: int | None = None
     if sum(overflow_flags) >= 2:
         shared_width = max(widths) if widths else size
-        shared_cycle = shared_width + config.spacer_px
+        if config.scroll_mode == ScrollMode.bounce:
+            shared_range = max(0, shared_width - available_width)
+            shared_cycle = max(1, shared_range * 2)
+        else:
+            shared_cycle = shared_width + config.spacer_px
 
     cycles = []
     for (_, width, _), overflow in zip(line_metrics, overflow_flags, strict=False):
         if overflow:
-            cycles.append(width + config.spacer_px)
+            if config.scroll_mode == ScrollMode.bounce:
+                scroll_range = max(0, width - available_width)
+                cycles.append(max(1, scroll_range * 2))
+            else:
+                cycles.append(width + config.spacer_px)
         else:
             cycles.append(1)
 
@@ -198,21 +207,40 @@ def build_frames(
                     else 0
                 )
                 cycle = shared_cycle
-                if cycle == 1:
-                    x = base_origin_x + align_offset
-                else:
-                    offset = -((frame_index * config.scroll_px_per_frame) % cycle)
-                    x = base_origin_x + align_offset + offset
+                offset = compute_scroll_offset(
+                    frame_index=frame_index,
+                    cycle=cycle,
+                    scroll_mode=config.scroll_mode,
+                    scroll_px_per_frame=config.scroll_px_per_frame,
+                    available_width=available_width,
+                    text_width=shared_width,
+                    scroll_range=shared_range,
+                )
+                x = base_origin_x + align_offset + offset
             else:
                 origin_x = position_origin_x(config.position, size, width, config.margin)
                 cycle = cycles[idx]
-                if cycle == 1:
-                    x = origin_x
-                else:
-                    offset = -((frame_index * config.scroll_px_per_frame) % cycle)
-                    x = origin_x + offset
+                offset = compute_scroll_offset(
+                    frame_index=frame_index,
+                    cycle=cycle,
+                    scroll_mode=config.scroll_mode,
+                    scroll_px_per_frame=config.scroll_px_per_frame,
+                    available_width=available_width,
+                    text_width=width,
+                    scroll_range=None,
+                )
+                x = origin_x + offset
             y = origin_y + idx * line_height
-            draw_scrolling_text(draw, line, font, x, y, cycle, size)
+            draw_scrolling_text(
+                draw,
+                line,
+                font,
+                x,
+                y,
+                cycle,
+                size,
+                wrap=config.scroll_mode == ScrollMode.loop,
+            )
         frames.append(frame.convert("P"))
     return frames
 
@@ -237,12 +265,14 @@ def draw_scrolling_text(
     y: int,
     cycle: int,
     size: int,
+    *,
+    wrap: bool,
 ) -> None:
     shadow = (0, 0, 0)
     fill = (255, 255, 255)
     draw.text((x + 1, y + 1), text, font=font, fill=shadow)
     draw.text((x, y), text, font=font, fill=fill)
-    if cycle > 1:
+    if wrap and cycle > 1:
         wrap_x = x + cycle
         if wrap_x < size:
             draw.text((wrap_x + 1, y + 1), text, font=font, fill=shadow)
@@ -256,6 +286,32 @@ def measure_text(font: FontType, text: str) -> tuple[int, int]:
     draw = ImageDraw.Draw(dummy)
     bbox = draw.textbbox((0, 0), text, font=font)
     return (int(bbox[2] - bbox[0]), int(bbox[3] - bbox[1]))
+
+
+def compute_scroll_offset(
+    *,
+    frame_index: int,
+    cycle: int,
+    scroll_mode: ScrollMode,
+    scroll_px_per_frame: int,
+    available_width: int,
+    text_width: int,
+    scroll_range: int | None,
+) -> int:
+    if cycle <= 1:
+        return 0
+    step = frame_index * scroll_px_per_frame
+    if scroll_mode == ScrollMode.bounce:
+        if scroll_range is None:
+            scroll_range = max(0, text_width - available_width)
+        if scroll_range == 0:
+            return 0
+        path = scroll_range * 2
+        pos = step % path
+        if pos > scroll_range:
+            pos = path - pos
+        return -int(pos)
+    return -int(step % cycle)
 
 
 def prepare_background(

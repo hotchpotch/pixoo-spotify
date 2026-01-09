@@ -2,11 +2,12 @@ import asyncio
 from pathlib import Path
 
 from PIL import Image
-from pixoo_spotify.config import GifConfig
+from pixoo_spotify.config import GifConfig, ScrollMode
 from pixoo_spotify.gif import (
     FontConfig,
     FontSpec,
     build_gif_bytes,
+    compute_scroll_offset,
     load_font_registry,
     prepare_background,
 )
@@ -42,3 +43,19 @@ def test_prepare_background_pixelates() -> None:
     )
     assert background.size == (dst_size, dst_size)
     assert background.getpixel((0, 0)) == background.getpixel((1, 1))
+
+
+def test_compute_scroll_offset_bounce() -> None:
+    offsets = [
+        compute_scroll_offset(
+            frame_index=idx,
+            cycle=4,
+            scroll_mode=ScrollMode.bounce,
+            scroll_px_per_frame=1,
+            available_width=8,
+            text_width=10,
+            scroll_range=2,
+        )
+        for idx in range(5)
+    ]
+    assert offsets == [0, -1, -2, -1, 0]

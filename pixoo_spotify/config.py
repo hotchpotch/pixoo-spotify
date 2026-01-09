@@ -16,6 +16,11 @@ class TextPosition(str, Enum):
     top_right = "top-right"
 
 
+class ScrollMode(str, Enum):
+    loop = "loop"
+    bounce = "bounce"
+
+
 class SpotifyConfig(BaseModel):
     client_id: str | None = None
     client_secret: str | None = None
@@ -47,6 +52,7 @@ class GifConfig(BaseModel):
     size: int = Field(64, ge=16, le=64)
     image_size: int | None = Field(None, ge=16, le=64)
     fps: int = Field(8, ge=1, le=60)
+    scroll_mode: ScrollMode = ScrollMode.loop
     position: TextPosition = TextPosition.bottom_right
     max_chars: int = Field(40, ge=1, le=80)
     output_path: Path = Path("output/latest.gif")

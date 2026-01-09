@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from spotipy.exceptions import SpotifyOauthError
 
 from pixoo_spotify.app import generate_gif_once, run_app
-from pixoo_spotify.config import AppConfig, TextPosition
+from pixoo_spotify.config import AppConfig, ScrollMode, TextPosition
 from pixoo_spotify.dummy import dummy_artwork, dummy_track
 from pixoo_spotify.gif import build_gif_bytes, default_font_config, load_font_registry
 from pixoo_spotify.models import TrackInfo
@@ -55,6 +55,7 @@ def build_overrides(**kwargs) -> dict:
             "size": kwargs.get("gif_size"),
             "image_size": kwargs.get("image_size"),
             "fps": kwargs.get("gif_fps"),
+            "scroll_mode": kwargs.get("scroll_mode"),
             "position": kwargs.get("gif_position"),
             "output_path": kwargs.get("gif_output"),
             "max_chars": kwargs.get("max_chars"),
@@ -84,6 +85,7 @@ def run(
     gif_size: int | None = typer.Option(None),
     image_size: int | None = typer.Option(None, "--image-size"),
     gif_fps: int | None = typer.Option(None),
+    scroll_mode: ScrollMode | None = typer.Option(None, "--scroll-mode"),
     gif_position: TextPosition | None = typer.Option(None),
     gif_output: Path | None = typer.Option(None),
     max_chars: int | None = typer.Option(None),
@@ -106,6 +108,7 @@ def run(
         gif_size=gif_size,
         image_size=image_size,
         gif_fps=gif_fps,
+        scroll_mode=scroll_mode,
         gif_position=gif_position,
         gif_output=gif_output,
         max_chars=max_chars,
