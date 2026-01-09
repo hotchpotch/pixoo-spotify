@@ -55,6 +55,7 @@ def test_compute_scroll_offset_bounce() -> None:
             available_width=8,
             text_width=10,
             scroll_range=2,
+            bounce_pause_frames=0,
             direction=-1,
         )
         for idx in range(5)
@@ -70,8 +71,27 @@ def test_compute_scroll_offset_bounce() -> None:
             available_width=8,
             text_width=10,
             scroll_range=2,
+            bounce_pause_frames=0,
             direction=1,
         )
         for idx in range(5)
     ]
     assert offsets_right == [0, 1, 2, 1, 0]
+
+
+def test_compute_scroll_offset_bounce_with_pause() -> None:
+    offsets = [
+        compute_scroll_offset(
+            frame_index=idx,
+            cycle=6,
+            scroll_mode=ScrollMode.bounce,
+            scroll_px_per_frame=1,
+            available_width=8,
+            text_width=10,
+            scroll_range=2,
+            bounce_pause_frames=1,
+            direction=-1,
+        )
+        for idx in range(6)
+    ]
+    assert offsets == [0, 0, -1, -2, -2, -1]

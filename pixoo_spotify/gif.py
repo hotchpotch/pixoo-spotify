@@ -166,7 +166,7 @@ def build_frames(
         shared_width = max(widths) if widths else size
         if config.scroll_mode == ScrollMode.bounce:
             shared_range = max(0, shared_width - available_width)
-            shared_cycle = max(1, shared_range * 2)
+            shared_cycle = max(1, shared_range * 2 + config.bounce_pause_frames * 2)
         else:
             shared_cycle = shared_width + config.spacer_px
 
@@ -175,7 +175,7 @@ def build_frames(
         if overflow:
             if config.scroll_mode == ScrollMode.bounce:
                 scroll_range = max(0, width - available_width)
-                cycles.append(max(1, scroll_range * 2))
+                cycles.append(max(1, scroll_range * 2 + config.bounce_pause_frames * 2))
             else:
                 cycles.append(width + config.spacer_px)
         else:
@@ -216,6 +216,7 @@ def build_frames(
                     available_width=available_width,
                     text_width=shared_width,
                     scroll_range=shared_range,
+                    bounce_pause_frames=config.bounce_pause_frames,
                     direction=direction,
                 )
                 x = base_origin_x + align_offset + offset
@@ -230,6 +231,7 @@ def build_frames(
                     available_width=available_width,
                     text_width=width,
                     scroll_range=None,
+                    bounce_pause_frames=config.bounce_pause_frames,
                     direction=direction,
                 )
                 x = origin_x + offset
@@ -300,6 +302,7 @@ def compute_scroll_offset(
     available_width: int,
     text_width: int,
     scroll_range: int | None,
+    bounce_pause_frames: int,
     direction: int,
 ) -> int:
     if cycle <= 1:
@@ -310,10 +313,19 @@ def compute_scroll_offset(
             scroll_range = max(0, text_width - available_width)
         if scroll_range == 0:
             return 0
-        path = scroll_range * 2
+        pause = max(0, bounce_pause_frames)
+        path = scroll_range * 2 + pause * 2
         pos = step % path
-        if pos > scroll_range:
-            pos = path - pos
+        if pos < pause:
+            return 0
+        pos -= pause
+        if pos <= scroll_range:
+            return int(pos) * direction
+        pos -= scroll_range
+        if pos < pause:
+            return int(scroll_range) * direction
+        pos -= pause
+        pos = scroll_range - pos
         return int(pos) * direction
     return -int(step % cycle)
 
