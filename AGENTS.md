@@ -1,6 +1,19 @@
-# AGENTS.md instructions for /Users/hotchpotch/src/github.com/hotchpotch/pixoo-spotify
+# AGENTS.md for /Users/hotchpotch/src/github.com/hotchpotch/pixoo-spotify
 
 <INSTRUCTIONS>
+## Project conventions
+- Use `uv add` for all dependencies. Keep runtime deps in `[project.dependencies]`.
+- Dev tools must live in the `dev` extra. Update via `uv add --optional dev <pkgs>` (tox runs with `uv run --extra dev tox`).
+- Prefer async/await for IO. Keep Pydantic models for config and data payloads.
+- CLI uses Typer. Non-background mode should show a small Rich UI panel (see `pixoo_spotify/ui.py`).
+- HTTP server is FastAPI + Uvicorn.
+- Fonts live under `./fonts/` and are gitignored; auto-download if missing.
+- Keep GIF output under `output/` and cache under `.cache/` (both gitignored).
+
+## Testing & linting
+- Run: `uv run --extra dev tox`
+- Tox runs pytest, ruff, and ty.
+
 ## Skills
 A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and file path so you can open the source for full instructions when using a specific skill.
 ### Available skills
