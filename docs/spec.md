@@ -52,6 +52,12 @@
 - `redirect_uri` は `http://127.0.0.1:8888/callback` がデフォルト。
 - GUI ブラウザが使える場合は自動で認証完結（ローカルリダイレクト受信）。
 - GUI が使えない場合は URL を別端末で開き、リダイレクトURLをコピペするフロー。
+- `client_id` は `auth --client-id` で必ず渡す。保存された値を以後の実行で自動利用する。
+- 認証情報の保存先は platformdirs の config ディレクトリ配下。
+  - Linux: `~/.config/pixoo-spotify/`
+  - macOS: `~/Library/Application Support/pixoo-spotify/`
+  - `auth_spotify_client.json` と `spotify_token.json` が作成される。
+- 既存の認証ファイルがある場合は `auth --reauth` が必要。
 
 ### CLI 例
 - 認証: `uv run pixoo-spotify auth`
