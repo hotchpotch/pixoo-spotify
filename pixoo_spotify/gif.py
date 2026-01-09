@@ -154,15 +154,24 @@ def build_frames(
     text_area_height = line_height * len(lines)
     origin_y = position_origin_y(config.position, size, text_area_height, config.margin)
 
-    cycles = []
-    for (_, width, _) in line_metrics:
-        overflow = max(0, width - (size - config.margin * 2))
-        if overflow == 0:
-            cycles.append(1)
-        else:
-            cycles.append(width + config.spacer_px)
+    available_width = size - config.margin * 2
+    widths = [width for _, width, _ in line_metrics]
+    overflow_flags = [width > available_width for width in widths]
 
-    total_frames = max(cycles) if cycles else 1
+    shared_cycle: int | None = None
+    shared_width: int | None = None
+    if sum(overflow_flags) >= 2:
+        shared_width = max(widths) if widths else size
+        shared_cycle = shared_width + config.spacer_px
+
+    cycles = []
+    for (_, width, _), overflow in zip(line_metrics, overflow_flags, strict=False):
+        if overflow:
+            cycles.append(width + config.spacer_px)
+        else:
+            cycles.append(1)
+
+    total_frames = shared_cycle or (max(cycles) if cycles else 1)
 
     frames: list[Image.Image] = []
     for frame_index in range(total_frames):
@@ -179,13 +188,29 @@ def build_frames(
         draw = ImageDraw.Draw(frame)
         for idx, line in enumerate(lines):
             font, width, _height = line_metrics[idx]
-            origin_x = position_origin_x(config.position, size, width, config.margin)
-            cycle = cycles[idx]
-            if cycle == 1:
-                x = origin_x
+            if shared_cycle and shared_width is not None:
+                base_origin_x = position_origin_x(
+                    config.position, size, shared_width, config.margin
+                )
+                align_offset = (
+                    shared_width - width
+                    if config.position in (TextPosition.bottom_right, TextPosition.top_right)
+                    else 0
+                )
+                cycle = shared_cycle
+                if cycle == 1:
+                    x = base_origin_x + align_offset
+                else:
+                    offset = -((frame_index * config.scroll_px_per_frame) % cycle)
+                    x = base_origin_x + align_offset + offset
             else:
-                offset = -((frame_index * config.scroll_px_per_frame) % cycle)
-                x = origin_x + offset
+                origin_x = position_origin_x(config.position, size, width, config.margin)
+                cycle = cycles[idx]
+                if cycle == 1:
+                    x = origin_x
+                else:
+                    offset = -((frame_index * config.scroll_px_per_frame) % cycle)
+                    x = origin_x + offset
             y = origin_y + idx * line_height
             draw_scrolling_text(draw, line, font, x, y, cycle, size)
         frames.append(frame.convert("P"))
