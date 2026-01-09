@@ -58,6 +58,8 @@ def build_overrides(**kwargs) -> dict:
             "scroll_mode": kwargs.get("scroll_mode"),
             "bounce_pause_frames": kwargs.get("bounce_pause_frames"),
             "overlay_color": kwargs.get("overlay_color"),
+            "text_color": kwargs.get("text_color"),
+            "text_shadow_color": kwargs.get("text_shadow_color"),
             "position": kwargs.get("gif_position"),
             "output_path": kwargs.get("gif_output"),
             "max_chars": kwargs.get("max_chars"),
@@ -90,6 +92,8 @@ def run(
     scroll_mode: ScrollMode | None = typer.Option(None, "--scroll-mode"),
     bounce_pause_frames: int | None = typer.Option(None, "--bounce-pause-frames"),
     overlay_color: str | None = typer.Option(None, "--overlay-color"),
+    text_color: str | None = typer.Option(None, "--text-color"),
+    text_shadow_color: str | None = typer.Option(None, "--text-shadow-color"),
     gif_position: TextPosition | None = typer.Option(None),
     gif_output: Path | None = typer.Option(None),
     max_chars: int | None = typer.Option(None),
@@ -115,6 +119,8 @@ def run(
         scroll_mode=scroll_mode,
         bounce_pause_frames=bounce_pause_frames,
         overlay_color=overlay_color,
+        text_color=text_color,
+        text_shadow_color=text_shadow_color,
         gif_position=gif_position,
         gif_output=gif_output,
         max_chars=max_chars,
@@ -180,12 +186,21 @@ def devices() -> None:
 def demo(
     output: Path = typer.Option(Path("output/demo.gif"), "--output"),
     image_size: int | None = typer.Option(None, "--image-size"),
+    text_color: str | None = typer.Option(None, "--text-color"),
+    text_shadow_color: str | None = typer.Option(None, "--text-shadow-color"),
 ) -> None:
     async def _generate() -> None:
         config = AppConfig()
         config.gif.output_path = output
         if image_size is not None:
             config.gif = config.gif.model_copy(update={"image_size": image_size})
+        if text_color is not None or text_shadow_color is not None:
+            config.gif = config.gif.model_copy(
+                update={
+                    "text_color": text_color or config.gif.text_color,
+                    "text_shadow_color": text_shadow_color or config.gif.text_shadow_color,
+                }
+            )
         track = dummy_track()
         fonts = await load_font_registry(default_font_config(), Path("fonts"))
         gif_bytes = build_gif_bytes(
@@ -209,12 +224,21 @@ def gif(
     artwork_url: str | None = typer.Option(None),
     output: Path = typer.Option(Path("output/manual.gif"), "--output"),
     image_size: int | None = typer.Option(None, "--image-size"),
+    text_color: str | None = typer.Option(None, "--text-color"),
+    text_shadow_color: str | None = typer.Option(None, "--text-shadow-color"),
 ) -> None:
     async def _generate() -> None:
         config = AppConfig()
         config.gif.output_path = output
         if image_size is not None:
             config.gif = config.gif.model_copy(update={"image_size": image_size})
+        if text_color is not None or text_shadow_color is not None:
+            config.gif = config.gif.model_copy(
+                update={
+                    "text_color": text_color or config.gif.text_color,
+                    "text_shadow_color": text_shadow_color or config.gif.text_shadow_color,
+                }
+            )
         track = TrackInfo(artist=artist, title=title, album=album, artwork_url=artwork_url)
         await generate_gif_once(config, track)
         typer.echo(f"saved: {output}")

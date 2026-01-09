@@ -184,6 +184,9 @@ def build_frames(
 
     total_frames = shared_cycle or (max(cycles) if cycles else 1)
 
+    text_rgba = config.text_rgba()
+    shadow_rgba = config.text_shadow_rgba()
+
     frames: list[Image.Image] = []
     for frame_index in range(total_frames):
         frame = background.copy().convert("RGBA")
@@ -246,6 +249,8 @@ def build_frames(
                 cycle,
                 size,
                 wrap=config.scroll_mode == ScrollMode.loop,
+                text_color=text_rgba,
+                shadow_color=shadow_rgba,
             )
         frames.append(frame.convert("P"))
     return frames
@@ -273,16 +278,20 @@ def draw_scrolling_text(
     size: int,
     *,
     wrap: bool,
+    text_color: tuple[int, int, int, int] | None,
+    shadow_color: tuple[int, int, int, int] | None,
 ) -> None:
-    shadow = (0, 0, 0)
-    fill = (255, 255, 255)
-    draw.text((x + 1, y + 1), text, font=font, fill=shadow)
-    draw.text((x, y), text, font=font, fill=fill)
+    if shadow_color is not None:
+        draw.text((x + 1, y + 1), text, font=font, fill=shadow_color)
+    if text_color is not None:
+        draw.text((x, y), text, font=font, fill=text_color)
     if wrap and cycle > 1:
         wrap_x = x + cycle
         if wrap_x < size:
-            draw.text((wrap_x + 1, y + 1), text, font=font, fill=shadow)
-            draw.text((wrap_x, y), text, font=font, fill=fill)
+            if shadow_color is not None:
+                draw.text((wrap_x + 1, y + 1), text, font=font, fill=shadow_color)
+            if text_color is not None:
+                draw.text((wrap_x, y), text, font=font, fill=text_color)
 
 
 def measure_text(font: FontType, text: str) -> tuple[int, int]:

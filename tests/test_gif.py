@@ -100,3 +100,9 @@ def test_compute_scroll_offset_bounce_with_pause() -> None:
 def test_overlay_rgba_skips_when_alpha_ff() -> None:
     config = GifConfig(overlay_color="#112233FF")
     assert config.overlay_rgba() is None
+
+
+def test_text_color_parsing() -> None:
+    config = GifConfig(text_color="#11223344", text_shadow_color="#55667700")
+    assert config.text_rgba() == (0x11, 0x22, 0x33, 0x44)
+    assert config.text_shadow_rgba() is None

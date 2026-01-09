@@ -60,6 +60,8 @@ class GifConfig(BaseModel):
     background_color: tuple[int, int, int] = (120, 120, 120)
     overlay_color: str | None = "#00000078"
     overlay_opacity: int = Field(120, ge=0, le=255)
+    text_color: str = "#ffffffff"
+    text_shadow_color: str = "#000000ff"
     scroll_px_per_frame: int = Field(1, ge=1, le=10)
     spacer_px: int = Field(8, ge=0, le=64)
     margin: int = Field(0, ge=0, le=8)
@@ -81,7 +83,7 @@ class GifConfig(BaseModel):
             raise ValueError("image_size must be less than or equal to size")
         return self
 
-    @field_validator("overlay_color")
+    @field_validator("overlay_color", "text_color", "text_shadow_color")
     @classmethod
     def validate_overlay_color(cls, value: str | None) -> str | None:
         if value is None:
@@ -94,22 +96,37 @@ class GifConfig(BaseModel):
         try:
             int(text, 16)
         except ValueError as exc:
-            raise ValueError("overlay_color must be valid hex") from exc
+            raise ValueError("color must be valid hex") from exc
         return f"#{text.lower()}"
 
     def overlay_rgba(self) -> tuple[int, int, int, int] | None:
         if self.overlay_color:
-            text = self.overlay_color.lstrip("#")
-            r = int(text[0:2], 16)
-            g = int(text[2:4], 16)
-            b = int(text[4:6], 16)
-            a = int(text[6:8], 16)
+            r, g, b, a = self._hex_to_rgba(self.overlay_color)
             if a == 0xFF:
                 return None
             return (r, g, b, a)
         if self.overlay_opacity >= 255:
             return None
         return (0, 0, 0, self.overlay_opacity)
+
+    def text_rgba(self) -> tuple[int, int, int, int]:
+        return self._hex_to_rgba(self.text_color)
+
+    def text_shadow_rgba(self) -> tuple[int, int, int, int] | None:
+        r, g, b, a = self._hex_to_rgba(self.text_shadow_color)
+        if a == 0:
+            return None
+        return (r, g, b, a)
+
+    @staticmethod
+    def _hex_to_rgba(value: str) -> tuple[int, int, int, int]:
+        text = value.lstrip("#")
+        return (
+            int(text[0:2], 16),
+            int(text[2:4], 16),
+            int(text[4:6], 16),
+            int(text[6:8], 16),
+        )
 
 
 class UiConfig(BaseModel):
