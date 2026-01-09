@@ -47,6 +47,12 @@
 - Dev: `pytest`, `ruff`, `ty`, `tox`, `tox-uv`
 - dev extra に登録済み: `uv run --extra dev tox`
 
+### Spotify 認証（PKCE）
+- PKCE を利用し `client_secret` は不要（`client_id` のみ必須）。
+- `redirect_uri` は `http://127.0.0.1:8888/callback` がデフォルト。
+- GUI ブラウザが使える場合は自動で認証完結（ローカルリダイレクト受信）。
+- GUI が使えない場合は URL を別端末で開き、リダイレクトURLをコピペするフロー。
+
 ### CLI 例
 - 認証: `uv run pixoo-spotify auth`
 - 実行: `uv run pixoo-spotify run --public-base-url http://<host>:8000 --device-ip <pixoo-ip>`
@@ -54,6 +60,7 @@
 
 ## 3. 未確認事項 / 要検証
 - Spotify OAuth のヘッドレス環境対応（`open_browser=True`）は環境によって失敗の可能性あり。
+- PKCE のリダイレクト URL が `127.0.0.1` 以外の場合は HTTPS が必要（運用環境に注意）。
 - Pixoo 側の `Device/PlayTFGif` が実機で正常に再生されるか未検証。
 - Pixoo が GIF のスクロール表現を意図通り表示できるか未検証。
 - Pixoo からの画像取得サイズが 64px のみか、32/16 も取得可能か要確認。

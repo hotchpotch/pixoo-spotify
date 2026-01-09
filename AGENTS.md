@@ -7,6 +7,8 @@
 - Prefer async/await for IO. Keep Pydantic models for config and data payloads.
 - CLI uses Typer. Non-background mode should show a small Rich UI panel (see `pixoo_spotify/ui.py`).
 - HTTP server is FastAPI + Uvicorn.
+- Spotify auth uses PKCE (no client secret required). Default redirect is `http://127.0.0.1:8888/callback`.
+- For headless auth, set `--no-open-browser` and copy/paste the redirect URL.
 - Fonts live under `./fonts/` and are gitignored; auto-download if missing.
 - Keep GIF output under `output/` and cache under `.cache/` (both gitignored).
 

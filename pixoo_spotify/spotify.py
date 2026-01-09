@@ -12,13 +12,12 @@ from pixoo_spotify.models import TrackInfo
 class SpotifyClient:
     def __init__(self, config: SpotifyConfig):
         self._config = config
-        self._auth_manager = spotipy.SpotifyOAuth(
+        self._auth_manager = spotipy.SpotifyPKCE(
             client_id=config.client_id,
-            client_secret=config.client_secret,
             redirect_uri=config.redirect_uri,
             scope=config.scope,
             cache_path=str(config.cache_path),
-            open_browser=True,
+            open_browser=config.open_browser,
         )
         self._client = spotipy.Spotify(auth_manager=self._auth_manager)
 
@@ -30,14 +29,7 @@ class SpotifyClient:
             return None
 
     def authorize_interactive(self) -> None:
-        url = self._auth_manager.get_authorize_url()
-        print("Open the following URL and authorize the app:")
-        print(url)
-        redirect = input("Paste the full redirect URL: ").strip()
-        code = self._auth_manager.parse_response_code(redirect)
-        if not code:
-            raise RuntimeError("Failed to parse authorization code.")
-        token = self._auth_manager.get_access_token(code, as_dict=True)
+        token = self._auth_manager.get_access_token()
         if not token:
             raise RuntimeError("Failed to fetch access token.")
 
@@ -47,7 +39,6 @@ def validate_spotify_config(config: SpotifyConfig) -> None:
         name
         for name, value in {
             "client_id": config.client_id,
-            "client_secret": config.client_secret,
             "redirect_uri": config.redirect_uri,
         }.items()
         if not value

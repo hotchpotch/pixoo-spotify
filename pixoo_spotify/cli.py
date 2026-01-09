@@ -31,6 +31,7 @@ def build_overrides(**kwargs) -> dict:
             "redirect_uri": kwargs.get("redirect_uri"),
             "scope": kwargs.get("scope"),
             "cache_path": kwargs.get("cache_path"),
+            "open_browser": kwargs.get("open_browser"),
         },
         "pixoo": {
             "device_ip": kwargs.get("device_ip"),
@@ -58,10 +59,13 @@ def build_overrides(**kwargs) -> dict:
 def run(
     config: Path | None = typer.Option(None, "--config", help="Config file (toml/json)"),
     client_id: str | None = typer.Option(None, envvar="SPOTIFY_CLIENT_ID"),
-    client_secret: str | None = typer.Option(None, envvar="SPOTIFY_CLIENT_SECRET"),
+    client_secret: str | None = typer.Option(
+        None, envvar="SPOTIFY_CLIENT_SECRET", help="Optional (unused for PKCE)"
+    ),
     redirect_uri: str | None = typer.Option(None),
     scope: str | None = typer.Option(None),
     cache_path: Path | None = typer.Option(None),
+    open_browser: bool = typer.Option(True, "--open-browser/--no-open-browser"),
     device_ip: str | None = typer.Option(None),
     discover: bool = typer.Option(True, "--discover/--no-discover"),
     play_on_device: bool = typer.Option(True, "--play-on-device/--no-play-on-device"),
@@ -82,6 +86,7 @@ def run(
         redirect_uri=redirect_uri,
         scope=scope,
         cache_path=cache_path,
+        open_browser=open_browser,
         device_ip=device_ip,
         discover=discover,
         play_on_device=play_on_device,
@@ -104,10 +109,13 @@ def run(
 def auth(
     config: Path | None = typer.Option(None, "--config", help="Config file (toml/json)"),
     client_id: str | None = typer.Option(None, envvar="SPOTIFY_CLIENT_ID"),
-    client_secret: str | None = typer.Option(None, envvar="SPOTIFY_CLIENT_SECRET"),
+    client_secret: str | None = typer.Option(
+        None, envvar="SPOTIFY_CLIENT_SECRET", help="Optional (unused for PKCE)"
+    ),
     redirect_uri: str | None = typer.Option(None),
     scope: str | None = typer.Option(None),
     cache_path: Path | None = typer.Option(None),
+    open_browser: bool = typer.Option(True, "--open-browser/--no-open-browser"),
 ) -> None:
     overrides = build_overrides(
         client_id=client_id,
@@ -115,6 +123,7 @@ def auth(
         redirect_uri=redirect_uri,
         scope=scope,
         cache_path=cache_path,
+        open_browser=open_browser,
     )
     config_obj = resolve_config(config, overrides)
     validate_spotify_config(config_obj.spotify)

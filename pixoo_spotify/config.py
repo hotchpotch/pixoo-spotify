@@ -19,9 +19,10 @@ class TextPosition(str, Enum):
 class SpotifyConfig(BaseModel):
     client_id: str | None = None
     client_secret: str | None = None
-    redirect_uri: str = "http://localhost:8888/callback"
+    redirect_uri: str = "http://127.0.0.1:8888/callback"
     scope: str = "user-read-currently-playing user-read-playback-state"
     cache_path: Path = Path(".cache/spotify_token.json")
+    open_browser: bool = True
 
 
 class PixooConfig(BaseModel):
