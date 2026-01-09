@@ -4,6 +4,7 @@ import asyncio
 from pathlib import Path
 
 import typer
+from dotenv import load_dotenv
 
 from pixoo_spotify.app import generate_gif_once, run_app
 from pixoo_spotify.config import AppConfig, TextPosition
@@ -12,6 +13,8 @@ from pixoo_spotify.gif import build_gif_bytes, default_font_config, load_font_re
 from pixoo_spotify.models import TrackInfo
 from pixoo_spotify.pixoo import discover_devices
 from pixoo_spotify.spotify import SpotifyClient, validate_spotify_config
+
+load_dotenv()
 
 app = typer.Typer(add_completion=False)
 
