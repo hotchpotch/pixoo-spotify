@@ -52,6 +52,7 @@ class GifConfig(BaseModel):
     size: int = Field(64, ge=16, le=64)
     image_size: int | None = Field(None, ge=16, le=64)
     fps: int = Field(8, ge=1, le=60)
+    artwork_only: bool = False
     scroll_mode: ScrollMode = ScrollMode.loop
     bounce_pause_frames: int = Field(100, ge=0, le=300)
     position: TextPosition = TextPosition.bottom_right

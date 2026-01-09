@@ -106,3 +106,15 @@ def test_text_color_parsing() -> None:
     config = GifConfig(text_color="#11223344", text_shadow_color="#55667700")
     assert config.text_rgba() == (0x11, 0x22, 0x33, 0x44)
     assert config.text_shadow_rgba() is None
+
+
+def test_artwork_only_generates_single_frame(tmp_path: Path) -> None:
+    track = TrackInfo(artist="Artist", title="Title", album="Album")
+    config = GifConfig(output_path=tmp_path / "out.gif", artwork_only=True)
+    font_config = FontConfig(fonts={"en": FontSpec(name="default")}, fallback_langs=["en"])
+    fonts = asyncio.run(load_font_registry(font_config, tmp_path))
+    gif_bytes = build_gif_bytes(track=track, config=config, fonts=fonts, artwork=None)
+    output = tmp_path / "out.gif"
+    output.write_bytes(gif_bytes)
+    image = Image.open(output)
+    assert getattr(image, "n_frames", 1) == 1

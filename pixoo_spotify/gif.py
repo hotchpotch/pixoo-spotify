@@ -142,6 +142,10 @@ def build_frames(
         background_color=config.background_color,
     )
 
+    if config.artwork_only:
+        frame = background.convert("P")
+        return [frame]
+
     lines = [line[: config.max_chars] for line in track.lines]
 
     line_metrics = []

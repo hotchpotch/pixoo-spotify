@@ -55,6 +55,7 @@ def build_overrides(**kwargs) -> dict:
             "size": kwargs.get("gif_size"),
             "image_size": kwargs.get("image_size"),
             "fps": kwargs.get("gif_fps"),
+            "artwork_only": kwargs.get("artwork_only"),
             "scroll_mode": kwargs.get("scroll_mode"),
             "bounce_pause_frames": kwargs.get("bounce_pause_frames"),
             "overlay_color": kwargs.get("overlay_color"),
@@ -89,6 +90,7 @@ def run(
     gif_size: int | None = typer.Option(None),
     image_size: int | None = typer.Option(None, "--image-size"),
     gif_fps: int | None = typer.Option(None),
+    artwork_only: bool = typer.Option(False, "--artwork-only/--with-text"),
     scroll_mode: ScrollMode | None = typer.Option(None, "--scroll-mode"),
     bounce_pause_frames: int | None = typer.Option(None, "--bounce-pause-frames"),
     overlay_color: str | None = typer.Option(None, "--overlay-color"),
@@ -116,6 +118,7 @@ def run(
         gif_size=gif_size,
         image_size=image_size,
         gif_fps=gif_fps,
+        artwork_only=artwork_only,
         scroll_mode=scroll_mode,
         bounce_pause_frames=bounce_pause_frames,
         overlay_color=overlay_color,
@@ -188,6 +191,7 @@ def demo(
     image_size: int | None = typer.Option(None, "--image-size"),
     text_color: str | None = typer.Option(None, "--text-color"),
     text_shadow_color: str | None = typer.Option(None, "--text-shadow-color"),
+    artwork_only: bool = typer.Option(False, "--artwork-only/--with-text"),
 ) -> None:
     async def _generate() -> None:
         config = AppConfig()
@@ -201,6 +205,8 @@ def demo(
                     "text_shadow_color": text_shadow_color or config.gif.text_shadow_color,
                 }
             )
+        if artwork_only:
+            config.gif = config.gif.model_copy(update={"artwork_only": True})
         track = dummy_track()
         fonts = await load_font_registry(default_font_config(), Path("fonts"))
         gif_bytes = build_gif_bytes(
@@ -226,6 +232,7 @@ def gif(
     image_size: int | None = typer.Option(None, "--image-size"),
     text_color: str | None = typer.Option(None, "--text-color"),
     text_shadow_color: str | None = typer.Option(None, "--text-shadow-color"),
+    artwork_only: bool = typer.Option(False, "--artwork-only/--with-text"),
 ) -> None:
     async def _generate() -> None:
         config = AppConfig()
@@ -239,6 +246,8 @@ def gif(
                     "text_shadow_color": text_shadow_color or config.gif.text_shadow_color,
                 }
             )
+        if artwork_only:
+            config.gif = config.gif.model_copy(update={"artwork_only": True})
         track = TrackInfo(artist=artist, title=title, album=album, artwork_url=artwork_url)
         await generate_gif_once(config, track)
         typer.echo(f"saved: {output}")
