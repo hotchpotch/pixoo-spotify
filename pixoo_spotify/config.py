@@ -53,7 +53,7 @@ class GifConfig(BaseModel):
     image_size: int | None = Field(None, ge=16, le=64)
     fps: int = Field(8, ge=1, le=60)
     scroll_mode: ScrollMode = ScrollMode.loop
-    bounce_pause_frames: int = Field(4, ge=0, le=120)
+    bounce_pause_frames: int = Field(12, ge=0, le=120)
     position: TextPosition = TextPosition.bottom_right
     max_chars: int = Field(40, ge=1, le=80)
     output_path: Path = Path("output/latest.gif")
