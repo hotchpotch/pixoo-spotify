@@ -1,6 +1,11 @@
 import spotipy
 from pixoo_spotify.config import ServerConfig, SpotifyConfig
-from pixoo_spotify.spotify import SpotifyClient, retry_after_seconds
+from pixoo_spotify.spotify import (
+    SpotifyClient,
+    load_cached_client_id,
+    retry_after_seconds,
+    save_client_id,
+)
 from pydantic import HttpUrl, TypeAdapter
 from spotipy.exceptions import SpotifyException
 
@@ -41,3 +46,10 @@ def test_retry_after_seconds_parses_header() -> None:
         headers={"Retry-After": "5"},
     )
     assert retry_after_seconds(exc) == 5.0
+
+
+def test_client_id_cache_roundtrip(tmp_path) -> None:
+    cache_path = tmp_path / "spotify_client.json"
+    assert load_cached_client_id(cache_path) is None
+    save_client_id("client-123", cache_path)
+    assert load_cached_client_id(cache_path) == "client-123"

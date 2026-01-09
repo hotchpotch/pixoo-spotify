@@ -4,7 +4,6 @@ import asyncio
 from pathlib import Path
 
 import typer
-from dotenv import load_dotenv
 from spotipy.exceptions import SpotifyOauthError
 
 from pixoo_spotify.app import generate_gif_once, run_app
@@ -13,9 +12,12 @@ from pixoo_spotify.dummy import dummy_artwork, dummy_track
 from pixoo_spotify.gif import build_gif_bytes, default_font_config, load_font_registry
 from pixoo_spotify.models import TrackInfo
 from pixoo_spotify.pixoo import discover_devices
-from pixoo_spotify.spotify import SpotifyClient, validate_spotify_config
-
-load_dotenv()
+from pixoo_spotify.spotify import (
+    SpotifyClient,
+    load_cached_client_id,
+    save_client_id,
+    validate_spotify_config,
+)
 
 app = typer.Typer(
     add_completion=False,
@@ -73,7 +75,7 @@ def build_overrides(**kwargs) -> dict:
 @app.command()
 def run(
     config: Path | None = typer.Option(None, "--config", help="Config file (toml/json)"),
-    client_id: str | None = typer.Option(None, envvar="SPOTIFY_CLIENT_ID"),
+    client_id: str | None = typer.Option(None, "--client-id"),
     client_secret: str | None = typer.Option(
         None, envvar="SPOTIFY_CLIENT_SECRET", help="Optional (unused for PKCE)"
     ),
@@ -102,8 +104,15 @@ def run(
     poll_interval: float | None = typer.Option(None),
     background: bool = typer.Option(False, "--background/--foreground"),
 ) -> None:
+    resolved_client_id = client_id or load_cached_client_id()
+    if resolved_client_id is None:
+        typer.echo(
+            "Spotify client id not found. Run `pixoo-spotify auth --client-id <id>` first.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
     overrides = build_overrides(
-        client_id=client_id,
+        client_id=resolved_client_id,
         client_secret=client_secret,
         redirect_uri=redirect_uri,
         scope=scope,
@@ -137,7 +146,7 @@ def run(
 @app.command()
 def auth(
     config: Path | None = typer.Option(None, "--config", help="Config file (toml/json)"),
-    client_id: str | None = typer.Option(None, envvar="SPOTIFY_CLIENT_ID"),
+    client_id: str = typer.Option(..., "--client-id"),
     client_secret: str | None = typer.Option(
         None, envvar="SPOTIFY_CLIENT_SECRET", help="Optional (unused for PKCE)"
     ),
@@ -146,6 +155,7 @@ def auth(
     cache_path: Path | None = typer.Option(None),
     open_browser: bool = typer.Option(True, "--open-browser/--no-open-browser"),
 ) -> None:
+    save_client_id(client_id)
     overrides = build_overrides(
         client_id=client_id,
         client_secret=client_secret,

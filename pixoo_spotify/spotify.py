@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 
 import spotipy
@@ -10,6 +11,7 @@ from spotipy.exceptions import SpotifyException
 from pixoo_spotify.config import SpotifyConfig
 from pixoo_spotify.models import TrackInfo
 
+CLIENT_ID_CACHE_PATH = Path(".cache/spotify_client.json")
 
 class SpotifyClient:
     def __init__(self, config: SpotifyConfig):
@@ -59,3 +61,25 @@ def retry_after_seconds(exc: SpotifyException) -> float | None:
         return float(header)
     except ValueError:
         return None
+
+
+def load_cached_client_id(path: Path | None = None) -> str | None:
+    cache_path = path or CLIENT_ID_CACHE_PATH
+    if not cache_path.exists():
+        return None
+    try:
+        payload = json.loads(cache_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    if isinstance(payload, dict):
+        client_id = payload.get("client_id")
+        if isinstance(client_id, str) and client_id.strip():
+            return client_id.strip()
+    return None
+
+
+def save_client_id(client_id: str, path: Path | None = None) -> Path:
+    cache_path = path or CLIENT_ID_CACHE_PATH
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(json.dumps({"client_id": client_id}), encoding="utf-8")
+    return cache_path
