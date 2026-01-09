@@ -15,15 +15,27 @@ from pixoo_spotify.pixoo import discover_devices
 from pixoo_spotify.spotify import (
     SpotifyClient,
     load_cached_client_id,
+    resolve_dot_config_path,
+    resolve_spotify_token_path,
     save_client_id,
     validate_spotify_config,
 )
+
+DOT_CONFIG_PATH: Path | None = None
 
 app = typer.Typer(
     add_completion=False,
     pretty_exceptions_enable=False,
     pretty_exceptions_show_locals=False,
 )
+
+
+@app.callback()
+def global_options(
+    config_path: Path | None = typer.Option(None, "--config-path"),
+) -> None:
+    global DOT_CONFIG_PATH
+    DOT_CONFIG_PATH = config_path
 
 
 def resolve_config(config_path: Path | None, overrides: dict) -> AppConfig:
@@ -104,13 +116,16 @@ def run(
     poll_interval: float | None = typer.Option(None),
     background: bool = typer.Option(False, "--background/--foreground"),
 ) -> None:
-    resolved_client_id = client_id or load_cached_client_id()
+    dot_config_path = resolve_dot_config_path(DOT_CONFIG_PATH)
+    resolved_client_id = client_id or load_cached_client_id(dot_config_path)
     if resolved_client_id is None:
         typer.echo(
             "Spotify client id not found. Run `pixoo-spotify auth --client-id <id>` first.",
             err=True,
         )
         raise typer.Exit(code=1)
+    if cache_path is None:
+        cache_path = resolve_spotify_token_path(dot_config_path)
     overrides = build_overrides(
         client_id=resolved_client_id,
         client_secret=client_secret,
@@ -155,7 +170,10 @@ def auth(
     cache_path: Path | None = typer.Option(None),
     open_browser: bool = typer.Option(True, "--open-browser/--no-open-browser"),
 ) -> None:
-    save_client_id(client_id)
+    dot_config_path = resolve_dot_config_path(DOT_CONFIG_PATH)
+    save_client_id(client_id, dot_config_path)
+    if cache_path is None:
+        cache_path = resolve_spotify_token_path(dot_config_path)
     overrides = build_overrides(
         client_id=client_id,
         client_secret=client_secret,

@@ -3,6 +3,8 @@ from pixoo_spotify.config import ServerConfig, SpotifyConfig
 from pixoo_spotify.spotify import (
     SpotifyClient,
     load_cached_client_id,
+    resolve_dot_config_path,
+    resolve_spotify_token_path,
     retry_after_seconds,
     save_client_id,
 )
@@ -49,7 +51,14 @@ def test_retry_after_seconds_parses_header() -> None:
 
 
 def test_client_id_cache_roundtrip(tmp_path) -> None:
-    cache_path = tmp_path / "spotify_client.json"
-    assert load_cached_client_id(cache_path) is None
-    save_client_id("client-123", cache_path)
-    assert load_cached_client_id(cache_path) == "client-123"
+    config_path = tmp_path / "config"
+    assert load_cached_client_id(config_path) is None
+    save_client_id("client-123", config_path)
+    assert load_cached_client_id(config_path) == "client-123"
+
+
+def test_resolve_config_paths(tmp_path) -> None:
+    resolved = resolve_dot_config_path(tmp_path)
+    assert resolved == tmp_path
+    token_path = resolve_spotify_token_path(tmp_path)
+    assert token_path.name == "spotify_token.json"

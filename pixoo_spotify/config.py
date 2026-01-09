@@ -6,6 +6,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from platformdirs import user_config_dir
 from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
 
@@ -26,7 +27,9 @@ class SpotifyConfig(BaseModel):
     client_secret: str | None = None
     redirect_uri: str = "http://127.0.0.1:8888/callback"
     scope: str = "user-read-currently-playing user-read-playback-state"
-    cache_path: Path = Path(".cache/spotify_token.json")
+    cache_path: Path = Field(
+        default_factory=lambda: Path(user_config_dir("pixoo-spotify")) / "spotify_token.json"
+    )
     open_browser: bool = True
 
 

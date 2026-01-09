@@ -5,13 +5,26 @@ import json
 from pathlib import Path
 
 import spotipy
+from platformdirs import user_config_dir
 from pydantic import ValidationError
 from spotipy.exceptions import SpotifyException
 
 from pixoo_spotify.config import SpotifyConfig
 from pixoo_spotify.models import TrackInfo
 
-CLIENT_ID_CACHE_PATH = Path(".cache/spotify_client.json")
+DOT_CONFIG_APP_NAME = "pixoo-spotify"
+AUTH_CLIENT_FILE_NAME = "auth_spotify_client.json"
+SPOTIFY_TOKEN_FILE_NAME = "spotify_token.json"
+
+
+def resolve_dot_config_path(dot_config_path: Path | None = None) -> Path:
+    if dot_config_path is not None:
+        return dot_config_path
+    return Path(user_config_dir(DOT_CONFIG_APP_NAME))
+
+
+def resolve_spotify_token_path(dot_config_path: Path | None = None) -> Path:
+    return resolve_dot_config_path(dot_config_path) / SPOTIFY_TOKEN_FILE_NAME
 
 class SpotifyClient:
     def __init__(self, config: SpotifyConfig):
@@ -63,12 +76,12 @@ def retry_after_seconds(exc: SpotifyException) -> float | None:
         return None
 
 
-def load_cached_client_id(path: Path | None = None) -> str | None:
-    cache_path = path or CLIENT_ID_CACHE_PATH
-    if not cache_path.exists():
+def load_cached_client_id(dot_config_path: Path | None = None) -> str | None:
+    auth_path = resolve_dot_config_path(dot_config_path) / AUTH_CLIENT_FILE_NAME
+    if not auth_path.exists():
         return None
     try:
-        payload = json.loads(cache_path.read_text(encoding="utf-8"))
+        payload = json.loads(auth_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
     if isinstance(payload, dict):
@@ -78,8 +91,8 @@ def load_cached_client_id(path: Path | None = None) -> str | None:
     return None
 
 
-def save_client_id(client_id: str, path: Path | None = None) -> Path:
-    cache_path = path or CLIENT_ID_CACHE_PATH
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    cache_path.write_text(json.dumps({"client_id": client_id}), encoding="utf-8")
-    return cache_path
+def save_client_id(client_id: str, dot_config_path: Path | None = None) -> Path:
+    auth_path = resolve_dot_config_path(dot_config_path) / AUTH_CLIENT_FILE_NAME
+    auth_path.parent.mkdir(parents=True, exist_ok=True)
+    auth_path.write_text(json.dumps({"client_id": client_id}), encoding="utf-8")
+    return auth_path
