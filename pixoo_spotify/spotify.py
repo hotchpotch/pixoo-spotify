@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import queue
 import threading
 import webbrowser
@@ -16,6 +17,8 @@ from spotipy.oauth2 import start_local_http_server
 from pixoo_spotify.config import SpotifyConfig
 from pixoo_spotify.models import TrackInfo
 from pixoo_spotify.paths import get_auth_paths
+
+logger = logging.getLogger(__name__)
 
 
 class SpotifyClient:
@@ -35,8 +38,18 @@ class SpotifyClient:
     async def current_track(self) -> TrackInfo | None:
         payload = await asyncio.to_thread(self._client.current_user_playing_track)
         try:
+            track = TrackInfo.from_spotify(payload)
+        except ValidationError:
+            logger.debug("Failed to parse current_user_playing_track payload.", exc_info=True)
+            track = None
+        if track is not None:
+            return track
+        logger.debug("Fallback to current_playback for metadata.")
+        payload = await asyncio.to_thread(self._client.current_playback)
+        try:
             return TrackInfo.from_spotify(payload)
         except ValidationError:
+            logger.debug("Failed to parse current_playback payload.", exc_info=True)
             return None
 
     def authorize_interactive(self) -> str:

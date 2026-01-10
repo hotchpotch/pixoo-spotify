@@ -36,15 +36,34 @@ class TrackInfo(BaseModel):
         item = payload.get("item")
         if not item:
             return None
+        item_type = item.get("type") or payload.get("currently_playing_type")
+        is_playing = bool(payload.get("is_playing", True))
+        if item_type == "episode" or "show" in item:
+            show = item.get("show") or {}
+            show_name = show.get("name") or ""
+            publisher = show.get("publisher") or ""
+            title = item.get("name") or "Podcast episode"
+            artist = show_name or publisher or "Podcast"
+            album = show_name or publisher or None
+            images = item.get("images") or show.get("images") or []
+            artwork_url = images[0].get("url") if images else None
+            return cls(
+                id=item.get("id"),
+                title=title,
+                artist=artist,
+                album=album,
+                artwork_url=artwork_url,
+                is_playing=is_playing,
+            )
         artists = ", ".join(artist.get("name", "") for artist in item.get("artists", []))
         album = (item.get("album") or {}).get("name")
         images = (item.get("album") or {}).get("images", [])
         artwork_url = images[0].get("url") if images else None
         return cls(
             id=item.get("id"),
-            title=item.get("name") or "",
-            artist=artists or "",
+            title=item.get("name") or "Unknown title",
+            artist=artists or "Unknown artist",
             album=album,
             artwork_url=artwork_url,
-            is_playing=bool(payload.get("is_playing", True)),
+            is_playing=is_playing,
         )
