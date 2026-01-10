@@ -12,6 +12,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from pixoo_spotify.config import LogFormat
 from pixoo_spotify.models import TrackInfo
 
 logger = logging.getLogger("pixoo_spotify.ui")
@@ -42,7 +43,7 @@ class AppUI:
         self._lock = threading.Lock()
 
         self._layout.split_column(
-            Layout(name="track", size=9),
+            Layout(name="track", size=6),
             Layout(name="logs"),
         )
         self._refresh()
@@ -121,11 +122,16 @@ def render_track(track: TrackInfo) -> None:
     )
 
 
-def configure_logging(background: bool, verbose: bool, ui: AppUI | None) -> None:
+def configure_logging(
+    background: bool, verbose: bool, ui: AppUI | None, log_format: LogFormat
+) -> None:
     level = logging.DEBUG if verbose else logging.INFO
-    log_format = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+    if log_format is LogFormat.basic:
+        log_format_value = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+    else:
+        log_format_value = "%(message)s"
     date_format = "%Y-%m-%d %H:%M:%S"
-    formatter = logging.Formatter(fmt=log_format, datefmt=date_format)
+    formatter = logging.Formatter(fmt=log_format_value, datefmt=date_format)
 
     httpx_logger = logging.getLogger("httpx")
     httpcore_logger = logging.getLogger("httpcore")
@@ -133,7 +139,7 @@ def configure_logging(background: bool, verbose: bool, ui: AppUI | None) -> None
     httpcore_logger.setLevel(logging.WARNING)
 
     if background or ui is None:
-        logging.basicConfig(level=level, format=log_format, datefmt=date_format)
+        logging.basicConfig(level=level, format=log_format_value, datefmt=date_format)
         return
 
     logging.basicConfig(level=logging.WARNING)
