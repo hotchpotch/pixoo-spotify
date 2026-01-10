@@ -3,7 +3,15 @@ from __future__ import annotations
 import json
 import locale
 import os
-import tomllib
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover
+    import tomllib
+else:
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
+        import tomli as tomllib
 from enum import Enum
 from pathlib import Path
 from typing import Any
