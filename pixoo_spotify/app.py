@@ -12,7 +12,7 @@ from pixoo_spotify.config import AppConfig
 from pixoo_spotify.gif import build_gif_bytes, fetch_artwork, load_font_registry
 from pixoo_spotify.models import TrackInfo
 from pixoo_spotify.net import local_ip_for_target
-from pixoo_spotify.pixoo import discover_devices, play_gif
+from pixoo_spotify.pixoo import discover_devices, play_gif, set_screen, stop_gif
 from pixoo_spotify.server import create_app
 from pixoo_spotify.spotify import SpotifyClient, retry_after_seconds, validate_spotify_config
 from pixoo_spotify.ui import render_track
@@ -56,8 +56,14 @@ async def run_app(config: AppConfig) -> None:
 
         server_task = asyncio.create_task(server.serve())
         last_signature: str | None = None
+        last_playing = False
         idle_streak = 0
         try:
+            if config.pixoo.play_on_device and device_ip and config.pixoo.auto_screen_off:
+                try:
+                    await set_screen(client, device_ip, True)
+                except httpx.HTTPError:
+                    logger.debug("Failed to turn on Pixoo screen at start.")
             while not server.should_exit:
                 try:
                     track = await spotify.current_track()
@@ -68,6 +74,12 @@ async def run_app(config: AppConfig) -> None:
                         continue
                     raise
                 if track and track.is_playing:
+                    if config.pixoo.play_on_device and device_ip and config.pixoo.auto_screen_off:
+                        if not last_playing:
+                            try:
+                                await set_screen(client, device_ip, True)
+                            except httpx.HTTPError:
+                                logger.debug("Failed to turn on Pixoo screen.")
                     signature = f"{track.id}:{track.title}:{track.artist}"
                     if signature != last_signature:
                         artwork = await fetch_artwork(
@@ -87,7 +99,21 @@ async def run_app(config: AppConfig) -> None:
                             render_track(track)
                         last_signature = signature
                     idle_streak = 0
+                    last_playing = True
                 else:
+                    if last_playing and config.pixoo.play_on_device and device_ip:
+                        if config.pixoo.auto_screen_off:
+                            try:
+                                await set_screen(client, device_ip, False)
+                            except httpx.HTTPError:
+                                logger.debug("Failed to turn off Pixoo screen.")
+                        else:
+                            try:
+                                await stop_gif(client, device_ip)
+                            except httpx.HTTPError:
+                                logger.debug("Failed to stop Pixoo GIF.")
+                    last_signature = None
+                    last_playing = False
                     idle_streak += 1
                 if idle_streak >= 10:
                     sleep_for = max(config.idle_poll_interval, config.poll_interval)
@@ -95,6 +121,17 @@ async def run_app(config: AppConfig) -> None:
                     sleep_for = config.poll_interval
                 await asyncio.sleep(sleep_for)
         finally:
+            if config.pixoo.play_on_device and device_ip:
+                if config.pixoo.auto_screen_off:
+                    try:
+                        await set_screen(client, device_ip, False)
+                    except httpx.HTTPError:
+                        logger.debug("Failed to turn off Pixoo screen on shutdown.")
+                else:
+                    try:
+                        await stop_gif(client, device_ip)
+                    except httpx.HTTPError:
+                        logger.debug("Failed to stop Pixoo GIF on shutdown.")
             server.should_exit = True
             await server_task
 

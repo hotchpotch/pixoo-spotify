@@ -47,6 +47,7 @@ class PixooConfig(BaseModel):
     device_ip: str | None = None
     discover: bool = True
     play_on_device: bool = True
+    auto_screen_off: bool = False
 
 
 class ServerConfig(BaseModel):

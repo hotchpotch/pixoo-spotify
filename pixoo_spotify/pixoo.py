@@ -41,3 +41,24 @@ async def play_gif(client: httpx.AsyncClient, device_ip: str, gif_url: str) -> d
     response = await client.post(f"http://{device_ip}:80/post", json=payload)
     response.raise_for_status()
     return response.json()
+
+
+async def stop_gif(client: httpx.AsyncClient, device_ip: str) -> dict[str, Any]:
+    payload = {
+        "Command": "Device/PlayTFGif",
+        "FileType": 2,
+        "FileName": "http://127.0.0.1/invalid.gif",
+    }
+    response = await client.post(f"http://{device_ip}:80/post", json=payload)
+    response.raise_for_status()
+    return response.json()
+
+
+async def set_screen(client: httpx.AsyncClient, device_ip: str, on: bool) -> dict[str, Any]:
+    payload = {
+        "Command": "Channel/OnOffScreen",
+        "OnOff": 1 if on else 0,
+    }
+    response = await client.post(f"http://{device_ip}:80/post", json=payload)
+    response.raise_for_status()
+    return response.json()

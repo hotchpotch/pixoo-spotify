@@ -83,6 +83,7 @@ def build_overrides(**kwargs) -> dict:
             "device_ip": kwargs.get("device_ip"),
             "discover": kwargs.get("discover"),
             "play_on_device": kwargs.get("play_on_device"),
+            "auto_screen_off": kwargs.get("auto_screen_off"),
         },
         "server": {
             "host": kwargs.get("server_host"),
@@ -127,6 +128,9 @@ def run(
     device_ip: str | None = typer.Option(None),
     discover: bool = typer.Option(True, "--discover/--no-discover"),
     play_on_device: bool = typer.Option(True, "--play-on-device/--no-play-on-device"),
+    auto_screen_off: bool = typer.Option(
+        False, "--auto-screen-off/--no-auto-screen-off", help="Turn off screen when idle"
+    ),
     server_host: str | None = typer.Option(None),
     server_port: int | None = typer.Option(None),
     public_base_url: str | None = typer.Option(None),
@@ -170,6 +174,7 @@ def run(
         device_ip=device_ip,
         discover=discover,
         play_on_device=play_on_device,
+        auto_screen_off=auto_screen_off,
         server_host=server_host,
         server_port=server_port,
         public_base_url=public_base_url,
