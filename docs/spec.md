@@ -32,7 +32,7 @@
 - `pixoo_spotify/pixoo.py`
   - Pixoo デバイス発見 / PlayTFGif 呼び出し
 - `pixoo_spotify/server.py`
-  - `http.server` で `/gif` を配信
+  - `http.server` で `/spotify_gif` を配信（Pixoo には `?{epoch}` を付けて送信）
 - `pixoo_spotify/config.py`
   - Pydantic 設定、config.toml/json 対応
 - `pixoo_spotify/ui.py`

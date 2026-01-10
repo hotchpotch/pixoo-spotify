@@ -14,7 +14,8 @@
 - Fonts live under the config directory (same location as auth files) in `fonts/`.
 - Use `pixoo-spotify font-install` to install the recommended Fusion Pixel Font.
 - If no fonts are installed, the packaged Misaki Gothic fallback is used.
-- Keep GIF output under `output/` and cache under `.cache/` (both gitignored).
+- Default GIF output lives under the platform config directory (`output/latest.gif` under the same base as auth/cache). Demo/manual commands still use `output/`.
+- HTTP server serves `/spotify_gif` (Pixoo URL includes a cache-busting `?{epoch}`).
 
 ## Testing & linting
 - Run: `uv run --extra dev tox`
