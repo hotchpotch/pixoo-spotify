@@ -215,8 +215,13 @@ def build_frames(
     text_area_height = line_height * len(lines) + line_gap * max(len(lines) - 1, 0) + shadow_extra
     origin_y = position_origin_y(config.position, size, text_area_height, config.margin)
 
-    margin_x = config.margin + (1 if config.scroll_mode == ScrollMode.bounce else 0)
-    available_width = size - margin_x * 2
+    base_margin = config.margin
+    margin_left, margin_right = horizontal_margins(
+        config.position,
+        base_margin,
+        config.scroll_mode == ScrollMode.bounce,
+    )
+    available_width = size - margin_left - margin_right
     widths = [width for _, width, _, _ in line_metrics]
     overflow_flags = [width > available_width for width in widths]
     direction = 1 if config.position in (TextPosition.bottom_right, TextPosition.top_right) else -1
@@ -228,7 +233,7 @@ def build_frames(
         shared_width = max(widths) if widths else size
         if config.scroll_mode == ScrollMode.bounce:
             shared_range = max(0, shared_width - available_width)
-            shared_cycle = max(1, shared_range * 2 + config.bounce_pause_frames * 2)
+            shared_cycle = max(1, shared_range * 2 + config.scroll_pause_frames * 2)
         else:
             shared_cycle = shared_width + config.spacer_px
 
@@ -237,7 +242,7 @@ def build_frames(
         if overflow:
             if config.scroll_mode == ScrollMode.bounce:
                 scroll_range = max(0, width - available_width)
-                cycles.append(max(1, scroll_range * 2 + config.bounce_pause_frames * 2))
+                cycles.append(max(1, scroll_range * 2 + config.scroll_pause_frames * 2))
             else:
                 cycles.append(width + config.spacer_px)
         else:
@@ -263,7 +268,14 @@ def build_frames(
         for idx, line in enumerate(lines):
             font, width, _height, offset_y = line_metrics[idx]
             if shared_cycle and shared_width is not None:
-                base_origin_x = position_origin_x(config.position, size, shared_width, margin_x)
+                base_origin_x = position_origin_x(
+                    config.position,
+                    size,
+                    shared_width,
+                    margin_right
+                    if config.position in (TextPosition.bottom_right, TextPosition.top_right)
+                    else margin_left,
+                )
                 align_offset = (
                     shared_width - width
                     if config.position in (TextPosition.bottom_right, TextPosition.top_right)
@@ -278,12 +290,19 @@ def build_frames(
                     available_width=available_width,
                     text_width=shared_width,
                     scroll_range=shared_range,
-                    bounce_pause_frames=config.bounce_pause_frames,
+                    scroll_pause_frames=config.scroll_pause_frames,
                     direction=direction,
                 )
                 x = base_origin_x + align_offset + offset
             else:
-                origin_x = position_origin_x(config.position, size, width, margin_x)
+                origin_x = position_origin_x(
+                    config.position,
+                    size,
+                    width,
+                    margin_right
+                    if config.position in (TextPosition.bottom_right, TextPosition.top_right)
+                    else margin_left,
+                )
                 cycle = cycles[idx]
                 offset = compute_scroll_offset(
                     frame_index=frame_index,
@@ -293,7 +312,7 @@ def build_frames(
                     available_width=available_width,
                     text_width=width,
                     scroll_range=None,
-                    bounce_pause_frames=config.bounce_pause_frames,
+                    scroll_pause_frames=config.scroll_pause_frames,
                     direction=direction,
                 )
                 x = origin_x + offset
@@ -341,6 +360,18 @@ def _quantize_frame(
     if palette_image is not None:
         return rgb.quantize(palette=palette_image, dither=dither)
     return rgb.quantize(colors=config.gif_colors, dither=dither)
+
+
+def horizontal_margins(
+    position: TextPosition,
+    base_margin: int,
+    bounce: bool,
+) -> tuple[int, int]:
+    bounce_pad = 1 if bounce else 0
+    if position in (TextPosition.bottom_left, TextPosition.top_left):
+        left_extra = 0 if bounce else 1
+        return (base_margin + bounce_pad + left_extra, base_margin + bounce_pad)
+    return (base_margin + bounce_pad, base_margin + bounce_pad)
 
 
 class _SafeFormatDict(dict[str, str]):
@@ -426,7 +457,7 @@ def compute_scroll_offset(
     available_width: int,
     text_width: int,
     scroll_range: int | None,
-    bounce_pause_frames: int,
+    scroll_pause_frames: int,
     direction: int,
 ) -> int:
     if cycle <= 1:
@@ -437,7 +468,7 @@ def compute_scroll_offset(
             scroll_range = max(0, text_width - available_width)
         if scroll_range == 0:
             return 0
-        pause = max(0, bounce_pause_frames)
+        pause = max(0, scroll_pause_frames)
         path = scroll_range * 2 + pause * 2
         pos = step % path
         if pos < pause:

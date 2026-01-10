@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from platformdirs import user_config_dir
-from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, Field, HttpUrl, field_validator, model_validator
 
 
 class TextPosition(str, Enum):
@@ -89,7 +89,13 @@ class GifConfig(BaseModel):
     artwork_only: bool = False
     text_format: str = "{title}\n{artist}"
     scroll_mode: ScrollMode = ScrollMode.loop
-    bounce_pause_frames: int = Field(100, ge=0, le=300)
+    scroll_pause_frames: int = Field(
+        15,
+        ge=0,
+        le=300,
+        validation_alias=AliasChoices("scroll_pause_frames", "bounce_pause_frames"),
+        serialization_alias="scroll_pause_frames",
+    )
     gif_colors: int = Field(256, ge=2, le=256)
     gif_dither: DitherMode = DitherMode.none
     gif_palette: PaletteMode = PaletteMode.shared

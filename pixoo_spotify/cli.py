@@ -104,7 +104,7 @@ def build_overrides(**kwargs) -> dict:
         "fps": kwargs.get("gif_fps"),
         "artwork_only": kwargs.get("artwork_only"),
         "scroll_mode": kwargs.get("scroll_mode"),
-        "bounce_pause_frames": kwargs.get("bounce_pause_frames"),
+        "scroll_pause_frames": kwargs.get("scroll_pause_frames"),
         "gif_colors": kwargs.get("gif_colors"),
         "gif_dither": kwargs.get("gif_dither"),
         "gif_palette": kwargs.get("gif_palette"),
@@ -224,11 +224,11 @@ def run(
         help="Text scroll mode (loop/bounce).",
         show_default=DEFAULT_CONFIG.gif.scroll_mode.value,
     ),
-    bounce_pause_frames: int | None = typer.Option(
+    scroll_pause_frames: int | None = typer.Option(
         None,
-        "--bounce-pause-frames",
-        help="Pause frames at bounce edges.",
-        show_default=str(DEFAULT_CONFIG.gif.bounce_pause_frames),
+        "--scroll-pause-frames",
+        help="Pause frames at bounce edges (loop scroll has no pause).",
+        show_default=str(DEFAULT_CONFIG.gif.scroll_pause_frames),
     ),
     gif_colors: int | None = typer.Option(
         None,
@@ -340,7 +340,7 @@ def run(
         gif_fps=gif_fps,
         artwork_only=artwork_only,
         scroll_mode=scroll_mode,
-        bounce_pause_frames=bounce_pause_frames,
+        scroll_pause_frames=scroll_pause_frames,
         gif_colors=gif_colors,
         gif_dither=gif_dither,
         gif_palette=gif_palette,

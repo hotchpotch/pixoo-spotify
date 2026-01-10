@@ -7,6 +7,7 @@ from pixoo_spotify.gif import (
     build_gif_bytes,
     compute_scroll_offset,
     format_text_lines,
+    horizontal_margins,
     load_font_registry,
     overlay_bounds,
     position_origin_x,
@@ -55,7 +56,7 @@ def test_compute_scroll_offset_bounce() -> None:
             available_width=8,
             text_width=10,
             scroll_range=2,
-            bounce_pause_frames=0,
+            scroll_pause_frames=0,
             direction=-1,
         )
         for idx in range(5)
@@ -71,7 +72,7 @@ def test_compute_scroll_offset_bounce() -> None:
             available_width=8,
             text_width=10,
             scroll_range=2,
-            bounce_pause_frames=0,
+            scroll_pause_frames=0,
             direction=1,
         )
         for idx in range(5)
@@ -89,12 +90,30 @@ def test_compute_scroll_offset_bounce_with_pause() -> None:
             available_width=8,
             text_width=10,
             scroll_range=2,
-            bounce_pause_frames=1,
+            scroll_pause_frames=1,
             direction=-1,
         )
         for idx in range(6)
     ]
     assert offsets == [0, 0, -1, -2, -2, -1]
+
+
+def test_compute_scroll_offset_loop_with_pause() -> None:
+    offsets = [
+        compute_scroll_offset(
+            frame_index=idx,
+            cycle=5,
+            scroll_mode=ScrollMode.loop,
+            scroll_px_per_frame=1,
+            available_width=8,
+            text_width=10,
+            scroll_range=None,
+            scroll_pause_frames=2,
+            direction=-1,
+        )
+        for idx in range(5)
+    ]
+    assert offsets == [0, -1, -2, -3, -4]
 
 
 def test_position_origin_respects_corners() -> None:
@@ -112,8 +131,9 @@ def test_left_align_starts_at_margin() -> None:
     size = 64
     margin = 2
     text_width = 100
-    available_width = size - margin * 2
-    origin_x = position_origin_x(TextPosition.top_left, size, text_width, margin)
+    margin_left, margin_right = horizontal_margins(TextPosition.top_left, margin, False)
+    available_width = size - margin_left - margin_right
+    origin_x = position_origin_x(TextPosition.top_left, size, text_width, margin_left)
     loop_offset = compute_scroll_offset(
         frame_index=0,
         cycle=text_width + 8,
@@ -122,10 +142,10 @@ def test_left_align_starts_at_margin() -> None:
         available_width=available_width,
         text_width=text_width,
         scroll_range=None,
-        bounce_pause_frames=0,
+        scroll_pause_frames=0,
         direction=-1,
     )
-    assert origin_x + loop_offset == margin
+    assert origin_x + loop_offset == margin_left
     bounce_offset = compute_scroll_offset(
         frame_index=0,
         cycle=4,
@@ -134,10 +154,22 @@ def test_left_align_starts_at_margin() -> None:
         available_width=available_width,
         text_width=text_width,
         scroll_range=text_width - available_width,
-        bounce_pause_frames=0,
+        scroll_pause_frames=0,
         direction=-1,
     )
-    assert origin_x + bounce_offset == margin
+    assert origin_x + bounce_offset == margin_left
+
+
+def test_horizontal_margins_add_left_padding() -> None:
+    assert horizontal_margins(TextPosition.top_left, 0, False) == (1, 0)
+    assert horizontal_margins(TextPosition.bottom_left, 2, False) == (3, 2)
+    assert horizontal_margins(TextPosition.top_right, 0, False) == (0, 0)
+
+
+def test_horizontal_margins_bounce_padding() -> None:
+    assert horizontal_margins(TextPosition.top_left, 0, True) == (1, 1)
+    assert horizontal_margins(TextPosition.bottom_left, 0, True) == (1, 1)
+    assert horizontal_margins(TextPosition.top_right, 0, True) == (1, 1)
 
 
 def test_overlay_rgba_skips_when_alpha_ff() -> None:
