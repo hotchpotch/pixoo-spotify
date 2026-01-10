@@ -36,14 +36,14 @@
 - `pixoo_spotify/config.py`
   - Pydantic 設定、config.toml/json 対応
 - `pixoo_spotify/ui.py`
-  - フォアグラウンド時の簡易コンソール表示
+  - Rich による表示（フォアグラウンド時）
 - `pixoo_spotify/dummy.py`
   - ダミー用の Track + Artwork
 - `tests/`
   - GIF 生成・設定マージのテスト
 
 ### 依存関係
-- Runtime: `fastapi`, `uvicorn`, `typer`, `pydantic`, `spotipy`, `httpx`, `pillow`, `langdetect`
+- Runtime: `fastapi`, `uvicorn`, `typer`, `pydantic`, `spotipy`, `httpx`, `pillow`, `langdetect`, `rich`
 - Dev: `pytest`, `ruff`, `ty`, `tox`, `tox-uv`
 - dev extra に登録済み: `uv run --extra dev tox`
 
