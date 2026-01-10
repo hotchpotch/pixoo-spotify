@@ -197,19 +197,25 @@ def build_frames(
 
     lines = [line[: config.max_chars] for line in track.lines]
 
+    text_rgba = config.text_rgba()
+    shadow_rgba = config.text_shadow_rgba()
+
     line_metrics = []
+    heights: list[int] = []
     for line in lines:
         font = fonts.font_for_text(line)
-        width, height = measure_text(font, line)
-        line_metrics.append((font, width, height))
+        width, height, offset_y = measure_text_bbox(font, line)
+        line_metrics.append((font, width, height, offset_y))
+        heights.append(height)
 
-    line_height = max((height for _, _, height in line_metrics), default=8)
-    text_area_height = line_height * len(lines)
+    line_height = max(heights, default=8)
+    shadow_extra = 1 if shadow_rgba is not None else 0
+    text_area_height = line_height * len(lines) + shadow_extra
     origin_y = position_origin_y(config.position, size, text_area_height, config.margin)
 
     margin_x = config.margin + (1 if config.scroll_mode == ScrollMode.bounce else 0)
     available_width = size - margin_x * 2
-    widths = [width for _, width, _ in line_metrics]
+    widths = [width for _, width, _, _ in line_metrics]
     overflow_flags = [width > available_width for width in widths]
     direction = 1 if config.position in (TextPosition.bottom_right, TextPosition.top_right) else -1
 
@@ -225,7 +231,7 @@ def build_frames(
             shared_cycle = shared_width + config.spacer_px
 
     cycles = []
-    for (_, width, _), overflow in zip(line_metrics, overflow_flags, strict=False):
+    for (_, width, _, _), overflow in zip(line_metrics, overflow_flags, strict=False):
         if overflow:
             if config.scroll_mode == ScrollMode.bounce:
                 scroll_range = max(0, width - available_width)
@@ -236,9 +242,6 @@ def build_frames(
             cycles.append(1)
 
     total_frames = shared_cycle or (max(cycles) if cycles else 1)
-
-    text_rgba = config.text_rgba()
-    shadow_rgba = config.text_shadow_rgba()
 
     frames_rgba: list[Image.Image] = []
     for frame_index in range(total_frames):
@@ -256,7 +259,7 @@ def build_frames(
 
         draw = ImageDraw.Draw(frame)
         for idx, line in enumerate(lines):
-            font, width, _height = line_metrics[idx]
+            font, width, _height, offset_y = line_metrics[idx]
             if shared_cycle and shared_width is not None:
                 base_origin_x = position_origin_x(config.position, size, shared_width, margin_x)
                 align_offset = (
@@ -292,7 +295,8 @@ def build_frames(
                     direction=direction,
                 )
                 x = origin_x + offset
-            y = origin_y + idx * line_height
+            line_top = origin_y + idx * line_height
+            y = line_top - offset_y
             draw_scrolling_text(
                 draw,
                 line,
@@ -375,13 +379,15 @@ def draw_scrolling_text(
                 draw.text((wrap_x, y), text, font=font, fill=text_color)
 
 
-def measure_text(font: FontType, text: str) -> tuple[int, int]:
+def measure_text_bbox(font: FontType, text: str) -> tuple[int, int, int]:
     if not text:
-        return (0, 0)
+        return (0, 0, 0)
     dummy = Image.new("RGB", (1, 1))
     draw = ImageDraw.Draw(dummy)
     bbox = draw.textbbox((0, 0), text, font=font)
-    return (int(bbox[2] - bbox[0]), int(bbox[3] - bbox[1]))
+    width = int(bbox[2] - bbox[0])
+    height = int(bbox[3] - bbox[1])
+    return (width, height, int(bbox[1]))
 
 
 def compute_scroll_offset(
