@@ -89,7 +89,7 @@ class GifConfig(BaseModel):
     gif_dither: DitherMode = DitherMode.none
     gif_palette: PaletteMode = PaletteMode.shared
     gif_optimize: bool = False
-    position: TextPosition = TextPosition.bottom_right
+    position: TextPosition = TextPosition.bottom_left
     max_chars: int = Field(40, ge=1, le=80)
     output_path: Path = Path("output/latest.gif")
     background_color: tuple[int, int, int] = (120, 120, 120)

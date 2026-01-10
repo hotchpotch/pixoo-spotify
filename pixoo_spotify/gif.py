@@ -252,9 +252,9 @@ def build_frames(
         if overlay_rgba is not None:
             overlay = Image.new("RGBA", (size, size), (0, 0, 0, 0))
             overlay_draw = ImageDraw.Draw(overlay)
-            overlay_top = max(0, origin_y - 1)
+            overlay_top, overlay_bottom = overlay_bounds(origin_y, text_area_height, size)
             overlay_draw.rectangle(
-                (0, overlay_top, size, size),
+                (0, overlay_top, size, overlay_bottom),
                 fill=overlay_rgba,
             )
             frame = Image.alpha_composite(frame, overlay)
@@ -352,7 +352,7 @@ def position_origin_x(position: TextPosition, size: int, width: int, margin: int
 def position_origin_y(position: TextPosition, size: int, text_height: int, margin: int) -> int:
     if position in (TextPosition.bottom_right, TextPosition.bottom_left):
         return size - text_height - margin
-    return margin
+    return margin + 1
 
 
 def draw_scrolling_text(
@@ -450,3 +450,12 @@ def prepare_background(
     if base_size != size:
         background = background.resize((size, size), Image.Resampling.NEAREST)
     return background
+
+
+def overlay_bounds(origin_y: int, text_area_height: int, size: int) -> tuple[int, int]:
+    extra_top = 1
+    overlay_top = max(0, origin_y - extra_top)
+    overlay_bottom = min(size, origin_y + text_area_height - 1)
+    if overlay_bottom <= overlay_top:
+        overlay_bottom = min(size, overlay_top + 1)
+    return (overlay_top, overlay_bottom)

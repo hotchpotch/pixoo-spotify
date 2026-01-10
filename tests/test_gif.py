@@ -2,11 +2,14 @@ import asyncio
 from pathlib import Path
 
 from PIL import Image
-from pixoo_spotify.config import GifConfig, ScrollMode
+from pixoo_spotify.config import GifConfig, ScrollMode, TextPosition
 from pixoo_spotify.gif import (
     build_gif_bytes,
     compute_scroll_offset,
     load_font_registry,
+    overlay_bounds,
+    position_origin_x,
+    position_origin_y,
     prepare_background,
 )
 from pixoo_spotify.models import TrackInfo
@@ -93,6 +96,49 @@ def test_compute_scroll_offset_bounce_with_pause() -> None:
     assert offsets == [0, 0, -1, -2, -2, -1]
 
 
+def test_position_origin_respects_corners() -> None:
+    assert position_origin_x(TextPosition.top_left, 64, 10, 2) == 2
+    assert position_origin_x(TextPosition.bottom_left, 64, 10, 2) == 2
+    assert position_origin_x(TextPosition.top_right, 64, 10, 2) == 52
+    assert position_origin_x(TextPosition.bottom_right, 64, 10, 2) == 52
+    assert position_origin_y(TextPosition.top_left, 64, 12, 3) == 4
+    assert position_origin_y(TextPosition.top_right, 64, 12, 3) == 4
+    assert position_origin_y(TextPosition.bottom_left, 64, 12, 3) == 49
+    assert position_origin_y(TextPosition.bottom_right, 64, 12, 3) == 49
+
+
+def test_left_align_starts_at_margin() -> None:
+    size = 64
+    margin = 2
+    text_width = 100
+    available_width = size - margin * 2
+    origin_x = position_origin_x(TextPosition.top_left, size, text_width, margin)
+    loop_offset = compute_scroll_offset(
+        frame_index=0,
+        cycle=text_width + 8,
+        scroll_mode=ScrollMode.loop,
+        scroll_px_per_frame=1,
+        available_width=available_width,
+        text_width=text_width,
+        scroll_range=None,
+        bounce_pause_frames=0,
+        direction=-1,
+    )
+    assert origin_x + loop_offset == margin
+    bounce_offset = compute_scroll_offset(
+        frame_index=0,
+        cycle=4,
+        scroll_mode=ScrollMode.bounce,
+        scroll_px_per_frame=1,
+        available_width=available_width,
+        text_width=text_width,
+        scroll_range=text_width - available_width,
+        bounce_pause_frames=0,
+        direction=-1,
+    )
+    assert origin_x + bounce_offset == margin
+
+
 def test_overlay_rgba_skips_when_alpha_ff() -> None:
     config = GifConfig(overlay_color="#112233FF")
     assert config.overlay_rgba() is None
@@ -113,3 +159,11 @@ def test_artwork_only_generates_single_frame(tmp_path: Path) -> None:
     output.write_bytes(gif_bytes)
     image = Image.open(output)
     assert getattr(image, "n_frames", 1) == 1
+
+
+def test_overlay_bounds_clamped_to_text_area() -> None:
+    top, bottom = overlay_bounds(origin_y=0, text_area_height=12, size=64)
+    assert top == 0
+    assert bottom == 11
+    top, bottom = overlay_bounds(origin_y=50, text_area_height=10, size=64)
+    assert (top, bottom) == (49, 59)
