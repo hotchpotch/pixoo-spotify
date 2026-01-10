@@ -50,6 +50,7 @@ async def run_app(config: AppConfig) -> None:
 
         server_task = asyncio.create_task(server.serve())
         last_signature: str | None = None
+        idle_streak = 0
         try:
             while not server.should_exit:
                 try:
@@ -79,7 +80,14 @@ async def run_app(config: AppConfig) -> None:
                         if not config.ui.background:
                             render_track(track)
                         last_signature = signature
-                await asyncio.sleep(config.poll_interval)
+                    idle_streak = 0
+                else:
+                    idle_streak += 1
+                if idle_streak >= 10:
+                    sleep_for = max(config.idle_poll_interval, config.poll_interval)
+                else:
+                    sleep_for = config.poll_interval
+                await asyncio.sleep(sleep_for)
         finally:
             server.should_exit = True
             await server_task

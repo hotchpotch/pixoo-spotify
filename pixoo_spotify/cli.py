@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import uuid
 from pathlib import Path
 
 import typer
 from spotipy.exceptions import SpotifyOauthError
 
 from pixoo_spotify.app import generate_gif_once, run_app
-from pixoo_spotify.config import AppConfig, ScrollMode, TextPosition
+from pixoo_spotify.config import AppConfig, DitherMode, PaletteMode, ScrollMode, TextPosition
 from pixoo_spotify.dummy import dummy_artwork, dummy_track
 from pixoo_spotify.gif import build_gif_bytes, default_font_config, load_font_registry
 from pixoo_spotify.models import TrackInfo
@@ -69,19 +70,24 @@ def build_overrides(**kwargs) -> dict:
         "gif": {
             "size": kwargs.get("gif_size"),
             "image_size": kwargs.get("image_size"),
-            "fps": kwargs.get("gif_fps"),
-            "artwork_only": kwargs.get("artwork_only"),
-            "scroll_mode": kwargs.get("scroll_mode"),
-            "bounce_pause_frames": kwargs.get("bounce_pause_frames"),
-            "overlay_color": kwargs.get("overlay_color"),
-            "text_color": kwargs.get("text_color"),
-            "text_shadow_color": kwargs.get("text_shadow_color"),
-            "position": kwargs.get("gif_position"),
-            "output_path": kwargs.get("gif_output"),
+        "fps": kwargs.get("gif_fps"),
+        "artwork_only": kwargs.get("artwork_only"),
+        "scroll_mode": kwargs.get("scroll_mode"),
+        "bounce_pause_frames": kwargs.get("bounce_pause_frames"),
+        "gif_colors": kwargs.get("gif_colors"),
+        "gif_dither": kwargs.get("gif_dither"),
+        "gif_palette": kwargs.get("gif_palette"),
+        "gif_optimize": kwargs.get("gif_optimize"),
+        "overlay_color": kwargs.get("overlay_color"),
+        "text_color": kwargs.get("text_color"),
+        "text_shadow_color": kwargs.get("text_shadow_color"),
+        "position": kwargs.get("gif_position"),
+        "output_path": kwargs.get("gif_output"),
             "max_chars": kwargs.get("max_chars"),
         },
         "ui": {"background": kwargs.get("background")},
         "poll_interval": kwargs.get("poll_interval"),
+        "idle_poll_interval": kwargs.get("idle_poll_interval"),
     }
 
 
@@ -108,6 +114,10 @@ def run(
     artwork_only: bool = typer.Option(False, "--artwork-only/--with-text"),
     scroll_mode: ScrollMode | None = typer.Option(None, "--scroll-mode"),
     bounce_pause_frames: int | None = typer.Option(None, "--bounce-pause-frames"),
+    gif_colors: int | None = typer.Option(None, "--gif-colors"),
+    gif_dither: DitherMode | None = typer.Option(None, "--gif-dither"),
+    gif_palette: PaletteMode | None = typer.Option(None, "--gif-palette"),
+    gif_optimize: bool | None = typer.Option(None, "--gif-optimize/--no-gif-optimize"),
     overlay_color: str | None = typer.Option(None, "--overlay-color"),
     text_color: str | None = typer.Option(None, "--text-color"),
     text_shadow_color: str | None = typer.Option(None, "--text-shadow-color"),
@@ -115,6 +125,7 @@ def run(
     gif_output: Path | None = typer.Option(None),
     max_chars: int | None = typer.Option(None),
     poll_interval: float | None = typer.Option(None),
+    idle_poll_interval: float | None = typer.Option(None, "--idle-poll-interval"),
     background: bool = typer.Option(False, "--background/--foreground"),
 ) -> None:
     config_path = resolve_pixoo_spotify_config_path(PIXOO_SPOTIFY_CONFIG_PATH)
@@ -146,6 +157,10 @@ def run(
         artwork_only=artwork_only,
         scroll_mode=scroll_mode,
         bounce_pause_frames=bounce_pause_frames,
+        gif_colors=gif_colors,
+        gif_dither=gif_dither,
+        gif_palette=gif_palette,
+        gif_optimize=gif_optimize,
         overlay_color=overlay_color,
         text_color=text_color,
         text_shadow_color=text_shadow_color,
@@ -153,6 +168,7 @@ def run(
         gif_output=gif_output,
         max_chars=max_chars,
         poll_interval=poll_interval,
+        idle_poll_interval=idle_poll_interval,
         background=background,
     )
     config_obj = resolve_config(config, overrides)
@@ -187,6 +203,13 @@ def auth(
     save_client_id(client_id, config_path)
     if cache_path is None:
         cache_path = get_auth_paths(config_path)[1]
+    final_cache_path = cache_path
+    temp_cache_path: Path | None = None
+    if reauth:
+        temp_cache_path = final_cache_path.with_name(
+            f".{final_cache_path.name}.reauth-{uuid.uuid4().hex}"
+        )
+        cache_path = temp_cache_path
     overrides = build_overrides(
         client_id=client_id,
         client_secret=client_secret,
@@ -201,6 +224,8 @@ def auth(
     try:
         token_path = client.authorize_interactive()
     except SpotifyOauthError as exc:
+        if temp_cache_path is not None:
+            temp_cache_path.unlink(missing_ok=True)
         message = str(exc)
         if exc.error_description:
             message = f"{message}\n{exc.error_description}"
@@ -211,6 +236,21 @@ def auth(
             err=True,
         )
         raise typer.Exit(code=1) from exc
+    except Exception:
+        if temp_cache_path is not None:
+            temp_cache_path.unlink(missing_ok=True)
+        raise
+    if temp_cache_path is not None:
+        try:
+            temp_cache_path.replace(final_cache_path)
+        except OSError as exc:
+            typer.echo(
+                "Authentication succeeded, but failed to update the token file at:\n"
+                f"{final_cache_path}\n{exc}",
+                err=True,
+            )
+            raise typer.Exit(code=1) from exc
+        token_path = str(final_cache_path)
     typer.echo(f"Authentication succeeded. Token saved to: {token_path}")
 
 
@@ -234,6 +274,10 @@ def demo(
     text_color: str | None = typer.Option(None, "--text-color"),
     text_shadow_color: str | None = typer.Option(None, "--text-shadow-color"),
     artwork_only: bool = typer.Option(False, "--artwork-only/--with-text"),
+    gif_colors: int | None = typer.Option(None, "--gif-colors"),
+    gif_dither: DitherMode | None = typer.Option(None, "--gif-dither"),
+    gif_palette: PaletteMode | None = typer.Option(None, "--gif-palette"),
+    gif_optimize: bool | None = typer.Option(None, "--gif-optimize/--no-gif-optimize"),
 ) -> None:
     async def _generate() -> None:
         config = AppConfig()
@@ -249,6 +293,22 @@ def demo(
             )
         if artwork_only:
             config.gif = config.gif.model_copy(update={"artwork_only": True})
+        if (
+            gif_colors is not None
+            or gif_dither is not None
+            or gif_palette is not None
+            or gif_optimize is not None
+        ):
+            config.gif = config.gif.model_copy(
+                update={
+                    "gif_colors": gif_colors or config.gif.gif_colors,
+                    "gif_dither": gif_dither or config.gif.gif_dither,
+                    "gif_palette": gif_palette or config.gif.gif_palette,
+                    "gif_optimize": gif_optimize
+                    if gif_optimize is not None
+                    else config.gif.gif_optimize,
+                }
+            )
         track = dummy_track()
         fonts = await load_font_registry(default_font_config(), Path("fonts"))
         gif_bytes = build_gif_bytes(
@@ -275,6 +335,10 @@ def gif(
     text_color: str | None = typer.Option(None, "--text-color"),
     text_shadow_color: str | None = typer.Option(None, "--text-shadow-color"),
     artwork_only: bool = typer.Option(False, "--artwork-only/--with-text"),
+    gif_colors: int | None = typer.Option(None, "--gif-colors"),
+    gif_dither: DitherMode | None = typer.Option(None, "--gif-dither"),
+    gif_palette: PaletteMode | None = typer.Option(None, "--gif-palette"),
+    gif_optimize: bool | None = typer.Option(None, "--gif-optimize/--no-gif-optimize"),
 ) -> None:
     async def _generate() -> None:
         config = AppConfig()
@@ -290,6 +354,22 @@ def gif(
             )
         if artwork_only:
             config.gif = config.gif.model_copy(update={"artwork_only": True})
+        if (
+            gif_colors is not None
+            or gif_dither is not None
+            or gif_palette is not None
+            or gif_optimize is not None
+        ):
+            config.gif = config.gif.model_copy(
+                update={
+                    "gif_colors": gif_colors or config.gif.gif_colors,
+                    "gif_dither": gif_dither or config.gif.gif_dither,
+                    "gif_palette": gif_palette or config.gif.gif_palette,
+                    "gif_optimize": gif_optimize
+                    if gif_optimize is not None
+                    else config.gif.gif_optimize,
+                }
+            )
         track = TrackInfo(artist=artist, title=title, album=album, artwork_url=artwork_url)
         await generate_gif_once(config, track)
         typer.echo(f"saved: {output}")

@@ -22,6 +22,16 @@ class ScrollMode(str, Enum):
     bounce = "bounce"
 
 
+class DitherMode(str, Enum):
+    none = "none"
+    floyd = "floyd"
+
+
+class PaletteMode(str, Enum):
+    auto = "auto"
+    shared = "shared"
+
+
 class SpotifyConfig(BaseModel):
     client_id: str | None = None
     client_secret: str | None = None
@@ -58,6 +68,10 @@ class GifConfig(BaseModel):
     artwork_only: bool = False
     scroll_mode: ScrollMode = ScrollMode.loop
     bounce_pause_frames: int = Field(100, ge=0, le=300)
+    gif_colors: int = Field(256, ge=2, le=256)
+    gif_dither: DitherMode = DitherMode.none
+    gif_palette: PaletteMode = PaletteMode.shared
+    gif_optimize: bool = False
     position: TextPosition = TextPosition.bottom_right
     max_chars: int = Field(40, ge=1, le=80)
     output_path: Path = Path("output/latest.gif")
@@ -144,6 +158,7 @@ class AppConfig(BaseModel):
     gif: GifConfig = Field(default_factory=GifConfig)
     ui: UiConfig = Field(default_factory=UiConfig)
     poll_interval: float = Field(5.0, ge=1.0, le=60.0)
+    idle_poll_interval: float = Field(20.0, ge=5.0, le=300.0)
 
     @classmethod
     def from_sources(cls, config_path: Path | None, overrides: dict[str, Any]) -> AppConfig:

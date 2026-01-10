@@ -9,7 +9,7 @@ from langdetect import DetectorFactory, detect_langs
 from PIL import Image, ImageDraw, ImageFont
 from pydantic import BaseModel, Field
 
-from pixoo_spotify.config import GifConfig, ScrollMode, TextPosition
+from pixoo_spotify.config import DitherMode, GifConfig, PaletteMode, ScrollMode, TextPosition
 from pixoo_spotify.fonts import MISAKI_GOTHIC_URL, ensure_font_file
 from pixoo_spotify.models import TrackInfo
 
@@ -124,6 +124,7 @@ def build_gif_bytes(
         duration=duration,
         loop=0,
         disposal=2,
+        optimize=config.gif_optimize,
     )
     return buffer.getvalue()
 
@@ -191,7 +192,7 @@ def build_frames(
     text_rgba = config.text_rgba()
     shadow_rgba = config.text_shadow_rgba()
 
-    frames: list[Image.Image] = []
+    frames_rgba: list[Image.Image] = []
     for frame_index in range(total_frames):
         frame = background.copy().convert("RGBA")
         overlay_rgba = config.overlay_rgba()
@@ -256,8 +257,36 @@ def build_frames(
                 text_color=text_rgba,
                 shadow_color=shadow_rgba,
             )
-        frames.append(frame.convert("P"))
+        frames_rgba.append(frame)
+
+    dither = _dither_option(config.gif_dither)
+    palette_image: Image.Image | None = None
+    if config.gif_palette == PaletteMode.shared and frames_rgba:
+        palette_source = frames_rgba[0].convert("RGB")
+        palette_image = palette_source.quantize(colors=config.gif_colors, dither=dither)
+
+    frames: list[Image.Image] = []
+    for frame in frames_rgba:
+        frames.append(_quantize_frame(frame, config, palette_image, dither))
     return frames
+
+
+def _dither_option(mode: DitherMode) -> Image.Dither:
+    if mode == DitherMode.none:
+        return Image.Dither.NONE
+    return Image.Dither.FLOYDSTEINBERG
+
+
+def _quantize_frame(
+    frame: Image.Image,
+    config: GifConfig,
+    palette_image: Image.Image | None,
+    dither: Image.Dither,
+) -> Image.Image:
+    rgb = frame.convert("RGB")
+    if palette_image is not None:
+        return rgb.quantize(palette=palette_image, dither=dither)
+    return rgb.quantize(colors=config.gif_colors, dither=dither)
 
 
 def position_origin_x(position: TextPosition, size: int, width: int, margin: int) -> int:
