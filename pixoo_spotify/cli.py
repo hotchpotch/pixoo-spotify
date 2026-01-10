@@ -41,6 +41,8 @@ from pixoo_spotify.spotify import (
 
 PIXOO_SPOTIFY_CONFIG_PATH: Path | None = None
 PIXOO_SPOTIFY_VERBOSE: bool = False
+DEFAULT_CONFIG = AppConfig()
+DEFAULT_TEXT_FORMAT_DISPLAY = DEFAULT_CONFIG.gif.text_format.replace("\n", "\\n")
 
 app = typer.Typer(
     add_completion=False,
@@ -51,8 +53,10 @@ app = typer.Typer(
 
 @app.callback()
 def global_options(
-    config_path: Path | None = typer.Option(None, "--config-path"),
-    verbose: bool = typer.Option(False, "--verbose", help="Enable debug logging"),
+    config_path: Path | None = typer.Option(None, "--config-path", show_default=True),
+    verbose: bool = typer.Option(
+        False, "--verbose", help="Enable debug logging", show_default=True
+    ),
 ) -> None:
     global PIXOO_SPOTIFY_CONFIG_PATH, PIXOO_SPOTIFY_VERBOSE
     PIXOO_SPOTIFY_CONFIG_PATH = config_path
@@ -77,7 +81,6 @@ def build_overrides(**kwargs) -> dict:
     return {
         "spotify": {
             "client_id": kwargs.get("client_id"),
-            "client_secret": kwargs.get("client_secret"),
             "redirect_uri": kwargs.get("redirect_uri"),
             "scope": kwargs.get("scope"),
             "language": kwargs.get("language"),
@@ -125,78 +128,131 @@ def build_overrides(**kwargs) -> dict:
 
 @app.command(help="Run the Pixoo Spotify GIF server and optional device playback.")
 def run(
-    config: Path | None = typer.Option(None, "--config", help="Config file (toml/json)."),
+    config: Path | None = typer.Option(
+        None, "--config", help="Config file (toml/json).", show_default=True
+    ),
     client_id: str | None = typer.Option(
         None,
         "--client-id",
         help="Override cached Spotify client id (usually not needed).",
-    ),
-    client_secret: str | None = typer.Option(
-        None,
-        envvar="SPOTIFY_CLIENT_SECRET",
-        help="Optional. Unused for PKCE and ignored during normal runs.",
+        show_default=True,
     ),
     redirect_uri: str | None = typer.Option(
-        None, help="Redirect URI for Spotify auth (rarely needed for run)."
+        None,
+        help="Redirect URI for Spotify auth (rarely needed for run).",
+        show_default=DEFAULT_CONFIG.spotify.redirect_uri,
     ),
     scope: str | None = typer.Option(
-        None, help="Spotify OAuth scopes (advanced; usually leave default)."
+        None,
+        help="Spotify OAuth scopes (advanced; usually leave default).",
+        show_default=DEFAULT_CONFIG.spotify.scope,
     ),
     language: str | None = typer.Option(
-        None, "--language", help="Preferred Spotify metadata language (Accept-Language)."
+        None,
+        "--language",
+        help="Preferred Spotify metadata language (Accept-Language).",
+        show_default=DEFAULT_CONFIG.spotify.language or "auto",
     ),
     cache_path: Path | None = typer.Option(
-        None, help="Path to Spotify token cache (auto if omitted)."
+        None,
+        help="Path to Spotify token cache (auto if omitted).",
+        show_default=str(DEFAULT_CONFIG.spotify.cache_path),
     ),
     open_browser: bool = typer.Option(
         True,
         "--open-browser/--no-open-browser",
         help="Open browser if re-auth is needed.",
+        show_default=True,
     ),
-    device_ip: str | None = typer.Option(None, help="Pixoo device IP address."),
+    device_ip: str | None = typer.Option(
+        None, help="Pixoo device IP address.", show_default=True
+    ),
     discover: bool = typer.Option(
-        True, "--discover/--no-discover", help="Auto-discover Pixoo on LAN."
+        True,
+        "--discover/--no-discover",
+        help="Auto-discover Pixoo on LAN.",
+        show_default=True,
     ),
     play_on_device: bool = typer.Option(
-        True, "--play-on-device/--no-play-on-device", help="Send GIF to Pixoo."
+        True,
+        "--play-on-device/--no-play-on-device",
+        help="Send GIF to Pixoo.",
+        show_default=True,
     ),
     auto_screen_off: bool = typer.Option(
         False,
         "--auto-screen-off/--no-auto-screen-off",
         help="Turn off screen when idle.",
+        show_default=True,
     ),
     server_host: str | None = typer.Option(
-        None, help="HTTP server host (default 0.0.0.0)."
+        None,
+        help="HTTP server host (default 0.0.0.0).",
+        show_default=DEFAULT_CONFIG.server.host,
     ),
     server_port: int | None = typer.Option(
-        None, help="HTTP server port (auto-select if omitted)."
+        None,
+        help="HTTP server port (auto-select if omitted).",
+        show_default=DEFAULT_CONFIG.server.port,
     ),
     public_base_url: str | None = typer.Option(
-        None, help="Public base URL used for Pixoo to fetch the GIF."
+        None, help="Public base URL used for Pixoo to fetch the GIF.", show_default=True
     ),
-    gif_size: int | None = typer.Option(None, help="GIF canvas size (16/32/64)."),
+    gif_size: int | None = typer.Option(
+        None,
+        help="GIF canvas size (16/32/64).",
+        show_default=DEFAULT_CONFIG.gif.size,
+    ),
     image_size: int | None = typer.Option(
-        None, "--image-size", help="Artwork source size (16/32/64)."
+        None,
+        "--image-size",
+        help="Artwork source size (16/32/64).",
+        show_default="same as --gif-size",
     ),
-    gif_fps: int | None = typer.Option(None, help="GIF frames per second."),
+    gif_fps: int | None = typer.Option(
+        None, help="GIF frames per second.", show_default=DEFAULT_CONFIG.gif.fps
+    ),
     artwork_only: bool = typer.Option(
-        False, "--artwork-only/--with-text", help="Render only artwork (no text)."
+        False,
+        "--artwork-only/--with-text",
+        help="Render only artwork (no text).",
+        show_default=True,
     ),
     scroll_mode: ScrollMode | None = typer.Option(
-        None, "--scroll-mode", help="Text scroll mode (loop/bounce)."
+        None,
+        "--scroll-mode",
+        help="Text scroll mode (loop/bounce).",
+        show_default=DEFAULT_CONFIG.gif.scroll_mode.value,
     ),
     bounce_pause_frames: int | None = typer.Option(
-        None, "--bounce-pause-frames", help="Pause frames at bounce edges."
+        None,
+        "--bounce-pause-frames",
+        help="Pause frames at bounce edges.",
+        show_default=DEFAULT_CONFIG.gif.bounce_pause_frames,
     ),
-    gif_colors: int | None = typer.Option(None, "--gif-colors", help="GIF palette size."),
+    gif_colors: int | None = typer.Option(
+        None,
+        "--gif-colors",
+        help="GIF palette size.",
+        show_default=DEFAULT_CONFIG.gif.gif_colors,
+    ),
     gif_dither: DitherMode | None = typer.Option(
-        None, "--gif-dither", help="GIF dither mode."
+        None,
+        "--gif-dither",
+        help="GIF dither mode.",
+        show_default=DEFAULT_CONFIG.gif.gif_dither.value,
     ),
     gif_palette: PaletteMode | None = typer.Option(
-        None, "--gif-palette", help="Palette mode (auto/shared)."
+        None,
+        "--gif-palette",
+        help="Palette mode (auto/shared).",
+        show_default=DEFAULT_CONFIG.gif.gif_palette.value,
     ),
     gif_optimize: bool | None = typer.Option(
-        None, "--gif-optimize/--no-gif-optimize", help="Enable GIF optimization."
+        None,
+        "--gif-optimize/--no-gif-optimize",
+        help="Enable GIF optimization.",
+        show_default=DEFAULT_CONFIG.gif.gif_optimize,
     ),
     text_format: str | None = typer.Option(
         None,
@@ -205,30 +261,54 @@ def run(
             "Text template (use {title}, {artist}, {album}; up to 3 lines). "
             'Example: --text-format "{artist}\\n{title}\\n{album}"'
         ),
+        show_default=DEFAULT_TEXT_FORMAT_DISPLAY,
     ),
     overlay_color: str | None = typer.Option(
-        None, "--overlay-color", help="Overlay color in #RRGGBBAA."
+        None,
+        "--overlay-color",
+        help="Overlay color in #RRGGBBAA.",
+        show_default=DEFAULT_CONFIG.gif.overlay_color,
     ),
     text_color: str | None = typer.Option(
-        None, "--text-color", help="Text color in #RRGGBBAA."
+        None,
+        "--text-color",
+        help="Text color in #RRGGBBAA.",
+        show_default=DEFAULT_CONFIG.gif.text_color,
     ),
     text_shadow_color: str | None = typer.Option(
-        None, "--text-shadow-color", help="Text shadow color in #RRGGBBAA."
+        None,
+        "--text-shadow-color",
+        help="Text shadow color in #RRGGBBAA.",
+        show_default=DEFAULT_CONFIG.gif.text_shadow_color,
     ),
     text_position: TextPosition | None = typer.Option(
-        None, "--text-position", help="Text position on the canvas."
+        None,
+        "--text-position",
+        help="Text position on the canvas.",
+        show_default=DEFAULT_CONFIG.gif.position.value,
     ),
-    gif_output: Path | None = typer.Option(None, help="Output path for generated GIF."),
-    max_chars: int | None = typer.Option(None, help="Max characters per line."),
+    gif_output: Path | None = typer.Option(
+        None,
+        help="Output path for generated GIF.",
+        show_default=str(DEFAULT_CONFIG.gif.output_path),
+    ),
+    max_chars: int | None = typer.Option(
+        None, help="Max characters per line.", show_default=DEFAULT_CONFIG.gif.max_chars
+    ),
     poll_interval: float | None = typer.Option(
-        None, help="Polling interval seconds."
+        None, help="Polling interval seconds.", show_default=DEFAULT_CONFIG.poll_interval
     ),
     idle_poll_interval: float | None = typer.Option(
-        None, "--idle-poll-interval", help="Polling interval when idle."
+        None,
+        "--idle-poll-interval",
+        help="Polling interval when idle.",
+        show_default=DEFAULT_CONFIG.idle_poll_interval,
     ),
-    ui_mode: UiMode = typer.Option(UiMode.rich, "--ui", help="UI mode (rich/text)."),
+    ui_mode: UiMode = typer.Option(
+        UiMode.rich, "--ui", help="UI mode (rich/text).", show_default=True
+    ),
     log_format: LogFormat = typer.Option(
-        LogFormat.simple, "--log-format", help="Log format (simple/basic)."
+        LogFormat.simple, "--log-format", help="Log format (simple/basic).", show_default=True
     ),
 ) -> None:
     config_path = resolve_pixoo_spotify_config_path(PIXOO_SPOTIFY_CONFIG_PATH)
@@ -243,7 +323,6 @@ def run(
         cache_path = get_auth_paths(config_path)[1]
     overrides = build_overrides(
         client_id=resolved_client_id,
-        client_secret=client_secret,
         redirect_uri=redirect_uri,
         scope=scope,
         language=language,
@@ -289,16 +368,21 @@ def run(
 
 @app.command()
 def auth(
-    config: Path | None = typer.Option(None, "--config", help="Config file (toml/json)"),
-    client_id: str = typer.Option(..., "--client-id"),
-    client_secret: str | None = typer.Option(
-        None, envvar="SPOTIFY_CLIENT_SECRET", help="Optional (unused for PKCE)"
+    config: Path | None = typer.Option(
+        None, "--config", help="Config file (toml/json)", show_default=True
     ),
-    redirect_uri: str | None = typer.Option(None),
-    scope: str | None = typer.Option(None),
-    cache_path: Path | None = typer.Option(None),
-    open_browser: bool = typer.Option(True, "--open-browser/--no-open-browser"),
-    reauth: bool = typer.Option(False, "--reauth"),
+    client_id: str = typer.Option(..., "--client-id", show_default=True),
+    redirect_uri: str | None = typer.Option(
+        None, show_default=DEFAULT_CONFIG.spotify.redirect_uri
+    ),
+    scope: str | None = typer.Option(None, show_default=DEFAULT_CONFIG.spotify.scope),
+    cache_path: Path | None = typer.Option(
+        None, show_default=str(DEFAULT_CONFIG.spotify.cache_path)
+    ),
+    open_browser: bool = typer.Option(
+        True, "--open-browser/--no-open-browser", show_default=True
+    ),
+    reauth: bool = typer.Option(False, "--reauth", show_default=True),
 ) -> None:
     config_path = resolve_pixoo_spotify_config_path(PIXOO_SPOTIFY_CONFIG_PATH)
     if auth_files_exist(config_path) and not reauth:
@@ -324,7 +408,6 @@ def auth(
         cache_path = temp_cache_path
     overrides = build_overrides(
         client_id=client_id,
-        client_secret=client_secret,
         redirect_uri=redirect_uri,
         scope=scope,
         cache_path=cache_path,
@@ -369,9 +452,14 @@ def auth(
 @app.command("font-install")
 def font_install(
     lang: str | None = typer.Option(
-        None, "--lang", help="Language code (e.g. ja, en, zh-cn) or fallback"
+        None,
+        "--lang",
+        help="Language code (e.g. ja, en, zh-cn) or fallback",
+        show_default=True,
     ),
-    font_path: Path | None = typer.Option(None, "--font-path", help="Path to a .ttf/.otf font"),
+    font_path: Path | None = typer.Option(
+        None, "--font-path", help="Path to a .ttf/.otf font", show_default=True
+    ),
 ) -> None:
     config_path = resolve_pixoo_spotify_config_path(PIXOO_SPOTIFY_CONFIG_PATH)
     fonts_dir = get_fonts_dir(config_path)
@@ -429,15 +517,35 @@ def devices() -> None:
 
 @app.command()
 def demo(
-    output: Path = typer.Option(Path("output/demo.gif"), "--output"),
-    image_size: int | None = typer.Option(None, "--image-size"),
-    text_color: str | None = typer.Option(None, "--text-color"),
-    text_shadow_color: str | None = typer.Option(None, "--text-shadow-color"),
-    artwork_only: bool = typer.Option(False, "--artwork-only/--with-text"),
-    gif_colors: int | None = typer.Option(None, "--gif-colors"),
-    gif_dither: DitherMode | None = typer.Option(None, "--gif-dither"),
-    gif_palette: PaletteMode | None = typer.Option(None, "--gif-palette"),
-    gif_optimize: bool | None = typer.Option(None, "--gif-optimize/--no-gif-optimize"),
+    output: Path = typer.Option(
+        Path("output/demo.gif"), "--output", show_default="output/demo.gif"
+    ),
+    image_size: int | None = typer.Option(
+        None, "--image-size", show_default="same as --gif-size"
+    ),
+    text_color: str | None = typer.Option(
+        None, "--text-color", show_default=DEFAULT_CONFIG.gif.text_color
+    ),
+    text_shadow_color: str | None = typer.Option(
+        None, "--text-shadow-color", show_default=DEFAULT_CONFIG.gif.text_shadow_color
+    ),
+    artwork_only: bool = typer.Option(
+        False, "--artwork-only/--with-text", show_default=DEFAULT_CONFIG.gif.artwork_only
+    ),
+    gif_colors: int | None = typer.Option(
+        None, "--gif-colors", show_default=DEFAULT_CONFIG.gif.gif_colors
+    ),
+    gif_dither: DitherMode | None = typer.Option(
+        None, "--gif-dither", show_default=DEFAULT_CONFIG.gif.gif_dither.value
+    ),
+    gif_palette: PaletteMode | None = typer.Option(
+        None, "--gif-palette", show_default=DEFAULT_CONFIG.gif.gif_palette.value
+    ),
+    gif_optimize: bool | None = typer.Option(
+        None,
+        "--gif-optimize/--no-gif-optimize",
+        show_default=DEFAULT_CONFIG.gif.gif_optimize,
+    ),
 ) -> None:
     async def _generate() -> None:
         config = AppConfig()
@@ -487,19 +595,39 @@ def demo(
 
 @app.command()
 def gif(
-    artist: str = typer.Option(...),
-    title: str = typer.Option(...),
-    album: str | None = typer.Option(None),
-    artwork_url: str | None = typer.Option(None),
-    output: Path = typer.Option(Path("output/manual.gif"), "--output"),
-    image_size: int | None = typer.Option(None, "--image-size"),
-    text_color: str | None = typer.Option(None, "--text-color"),
-    text_shadow_color: str | None = typer.Option(None, "--text-shadow-color"),
-    artwork_only: bool = typer.Option(False, "--artwork-only/--with-text"),
-    gif_colors: int | None = typer.Option(None, "--gif-colors"),
-    gif_dither: DitherMode | None = typer.Option(None, "--gif-dither"),
-    gif_palette: PaletteMode | None = typer.Option(None, "--gif-palette"),
-    gif_optimize: bool | None = typer.Option(None, "--gif-optimize/--no-gif-optimize"),
+    artist: str = typer.Option(..., show_default=True),
+    title: str = typer.Option(..., show_default=True),
+    album: str | None = typer.Option(None, show_default=True),
+    artwork_url: str | None = typer.Option(None, show_default=True),
+    output: Path = typer.Option(
+        Path("output/manual.gif"), "--output", show_default="output/manual.gif"
+    ),
+    image_size: int | None = typer.Option(
+        None, "--image-size", show_default="same as --gif-size"
+    ),
+    text_color: str | None = typer.Option(
+        None, "--text-color", show_default=DEFAULT_CONFIG.gif.text_color
+    ),
+    text_shadow_color: str | None = typer.Option(
+        None, "--text-shadow-color", show_default=DEFAULT_CONFIG.gif.text_shadow_color
+    ),
+    artwork_only: bool = typer.Option(
+        False, "--artwork-only/--with-text", show_default=DEFAULT_CONFIG.gif.artwork_only
+    ),
+    gif_colors: int | None = typer.Option(
+        None, "--gif-colors", show_default=DEFAULT_CONFIG.gif.gif_colors
+    ),
+    gif_dither: DitherMode | None = typer.Option(
+        None, "--gif-dither", show_default=DEFAULT_CONFIG.gif.gif_dither.value
+    ),
+    gif_palette: PaletteMode | None = typer.Option(
+        None, "--gif-palette", show_default=DEFAULT_CONFIG.gif.gif_palette.value
+    ),
+    gif_optimize: bool | None = typer.Option(
+        None,
+        "--gif-optimize/--no-gif-optimize",
+        show_default=DEFAULT_CONFIG.gif.gif_optimize,
+    ),
 ) -> None:
     async def _generate() -> None:
         config = AppConfig()

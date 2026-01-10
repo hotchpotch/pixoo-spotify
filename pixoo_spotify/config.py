@@ -46,7 +46,6 @@ class UiMode(str, Enum):
 
 class SpotifyConfig(BaseModel):
     client_id: str | None = None
-    client_secret: str | None = None
     redirect_uri: str = "http://127.0.0.1:8888/callback"
     scope: str = "user-read-currently-playing user-read-playback-state"
     language: str | None = Field(default_factory=lambda: resolve_default_language())
