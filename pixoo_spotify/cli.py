@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import uuid
 from pathlib import Path
 
@@ -33,6 +32,7 @@ from pixoo_spotify.spotify import (
 )
 
 PIXOO_SPOTIFY_CONFIG_PATH: Path | None = None
+PIXOO_SPOTIFY_VERBOSE: bool = False
 
 app = typer.Typer(
     add_completion=False,
@@ -46,14 +46,9 @@ def global_options(
     config_path: Path | None = typer.Option(None, "--config-path"),
     verbose: bool = typer.Option(False, "--verbose", help="Enable debug logging"),
 ) -> None:
-    global PIXOO_SPOTIFY_CONFIG_PATH
+    global PIXOO_SPOTIFY_CONFIG_PATH, PIXOO_SPOTIFY_VERBOSE
     PIXOO_SPOTIFY_CONFIG_PATH = config_path
-    logging.basicConfig(level=logging.WARNING)
-    logging.getLogger("pixoo_spotify").setLevel(logging.INFO)
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("httpcore").setLevel(logging.WARNING)
-    if verbose:
-        logging.getLogger("pixoo_spotify").setLevel(logging.DEBUG)
+    PIXOO_SPOTIFY_VERBOSE = verbose
 
 
 def resolve_config(config_path: Path | None, overrides: dict) -> AppConfig:
@@ -205,7 +200,7 @@ def run(
         if candidate is not None:
             config_obj.server = config_obj.server.model_copy(update={"port": candidate})
             typer.echo(f"Using available port {candidate} (auto-selected).")
-    asyncio.run(run_app(config_obj))
+    asyncio.run(run_app(config_obj, verbose=PIXOO_SPOTIFY_VERBOSE))
 
 
 @app.command()
