@@ -6,6 +6,7 @@ from pixoo_spotify.config import GifConfig, ScrollMode, TextPosition
 from pixoo_spotify.gif import (
     build_gif_bytes,
     compute_scroll_offset,
+    format_text_lines,
     load_font_registry,
     overlay_bounds,
     position_origin_x,
@@ -159,6 +160,20 @@ def test_artwork_only_generates_single_frame(tmp_path: Path) -> None:
     output.write_bytes(gif_bytes)
     image = Image.open(output)
     assert getattr(image, "n_frames", 1) == 1
+
+
+def test_text_format_lines_limit() -> None:
+    track = TrackInfo(artist="Artist", title="Title", album="Album")
+    config = GifConfig(text_format="{title}\n{artist}\n{album}\nextra")
+    lines = format_text_lines(track, config)
+    assert lines == ["Title", "Artist", "Album"]
+
+
+def test_text_format_accepts_escaped_newlines() -> None:
+    track = TrackInfo(artist="Artist", title="Title", album="Album")
+    config = GifConfig(text_format="{title}\\n{artist}\\n{album}")
+    lines = format_text_lines(track, config)
+    assert lines == ["Title", "Artist", "Album"]
 
 
 def test_overlay_bounds_clamped_to_text_area() -> None:

@@ -195,7 +195,7 @@ def build_frames(
         frame = background.convert("P")
         return [frame]
 
-    lines = [line[: config.max_chars] for line in track.lines]
+    lines = [line[: config.max_chars] for line in format_text_lines(track, config)]
 
     text_rgba = config.text_rgba()
     shadow_rgba = config.text_shadow_rgba()
@@ -341,6 +341,31 @@ def _quantize_frame(
     if palette_image is not None:
         return rgb.quantize(palette=palette_image, dither=dither)
     return rgb.quantize(colors=config.gif_colors, dither=dither)
+
+
+class _SafeFormatDict(dict[str, str]):
+    def __missing__(self, key: str) -> str:
+        return ""
+
+
+def format_text_lines(track: TrackInfo, config: GifConfig) -> list[str]:
+    template = config.text_format.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\r", "\n")
+    values = _SafeFormatDict(
+        {
+            "title": track.title or "",
+            "artist": track.artist or "",
+            "album": track.album or "",
+        }
+    )
+    text = template.format_map(values)
+    lines = [line.strip() for line in text.splitlines()]
+    lines = [line for line in lines if line]
+    if not lines:
+        lines = [track.title, track.artist]
+    if len(lines) > 3:
+        logger.warning("text_format produced %d lines; truncating to 3.", len(lines))
+        lines = lines[:3]
+    return lines
 
 
 def position_origin_x(position: TextPosition, size: int, width: int, margin: int) -> int:

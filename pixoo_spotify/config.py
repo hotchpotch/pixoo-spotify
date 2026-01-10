@@ -88,6 +88,7 @@ class GifConfig(BaseModel):
     image_size: int | None = Field(None, ge=16, le=64)
     fps: int = Field(8, ge=1, le=60)
     artwork_only: bool = False
+    text_format: str = "{title}\n{artist}"
     scroll_mode: ScrollMode = ScrollMode.loop
     bounce_pause_frames: int = Field(100, ge=0, le=300)
     gif_colors: int = Field(256, ge=2, le=256)

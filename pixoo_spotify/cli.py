@@ -106,6 +106,7 @@ def build_overrides(**kwargs) -> dict:
         "gif_dither": kwargs.get("gif_dither"),
         "gif_palette": kwargs.get("gif_palette"),
         "gif_optimize": kwargs.get("gif_optimize"),
+        "text_format": kwargs.get("text_format"),
         "overlay_color": kwargs.get("overlay_color"),
         "text_color": kwargs.get("text_color"),
         "text_shadow_color": kwargs.get("text_shadow_color"),
@@ -197,6 +198,14 @@ def run(
     gif_optimize: bool | None = typer.Option(
         None, "--gif-optimize/--no-gif-optimize", help="Enable GIF optimization."
     ),
+    text_format: str | None = typer.Option(
+        None,
+        "--text-format",
+        help=(
+            "Text template (use {title}, {artist}, {album}; up to 3 lines). "
+            'Example: --text-format "{artist}\\n{title}\\n{album}"'
+        ),
+    ),
     overlay_color: str | None = typer.Option(
         None, "--overlay-color", help="Overlay color in #RRGGBBAA."
     ),
@@ -257,6 +266,7 @@ def run(
         gif_dither=gif_dither,
         gif_palette=gif_palette,
         gif_optimize=gif_optimize,
+        text_format=text_format,
         overlay_color=overlay_color,
         text_color=text_color,
         text_shadow_color=text_shadow_color,
