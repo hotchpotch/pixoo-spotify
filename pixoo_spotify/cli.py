@@ -48,11 +48,12 @@ def global_options(
 ) -> None:
     global PIXOO_SPOTIFY_CONFIG_PATH
     PIXOO_SPOTIFY_CONFIG_PATH = config_path
+    logging.basicConfig(level=logging.WARNING)
+    logging.getLogger("pixoo_spotify").setLevel(logging.INFO)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
     if verbose:
-        logging.basicConfig(level=logging.INFO)
         logging.getLogger("pixoo_spotify").setLevel(logging.DEBUG)
-        logging.getLogger("httpx").setLevel(logging.WARNING)
-        logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 def resolve_config(config_path: Path | None, overrides: dict) -> AppConfig:

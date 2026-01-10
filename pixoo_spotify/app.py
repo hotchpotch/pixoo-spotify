@@ -39,31 +39,32 @@ async def run_app(config: AppConfig) -> None:
 
     spotify = SpotifyClient(config.spotify)
     device_ip: str | None = config.pixoo.device_ip
+    if device_ip:
+        logger.info("Pixoo device IP (configured): %s", device_ip)
 
     async with httpx.AsyncClient(timeout=10) as client:
         if not device_ip and config.pixoo.discover:
             devices = await discover_devices(client)
             if devices:
-                device_ip = devices[0].device_private_ip
-                logger.debug("Discovered Pixoo device: %s", device_ip)
+                device = devices[0]
+                device_ip = device.device_private_ip
+                logger.info("Pixoo device discovered: %s (%s)", device.device_name, device_ip)
 
         base_url = config.server.base_url()
         if config.server.public_base_url is None and device_ip:
             local_ip = local_ip_for_target(device_ip)
             if local_ip:
                 base_url = f"http://{local_ip}:{config.server.port}"
-                logger.debug("Resolved local base URL for Pixoo: %s", base_url)
+                logger.info("Resolved local base URL for Pixoo: %s", base_url)
+        if config.server.public_base_url is not None:
+            logger.info("Using configured public base URL: %s", base_url)
 
         server_task = asyncio.create_task(server.serve())
         last_signature: str | None = None
         last_playing = False
+        screen_initialized = False
         idle_streak = 0
         try:
-            if config.pixoo.play_on_device and device_ip and config.pixoo.auto_screen_off:
-                try:
-                    await set_screen(client, device_ip, True)
-                except httpx.HTTPError:
-                    logger.debug("Failed to turn on Pixoo screen at start.")
             while not server.should_exit:
                 try:
                     track = await spotify.current_track()
@@ -75,11 +76,13 @@ async def run_app(config: AppConfig) -> None:
                     raise
                 if track and track.is_playing:
                     if config.pixoo.play_on_device and device_ip and config.pixoo.auto_screen_off:
-                        if not last_playing:
+                        if not last_playing or not screen_initialized:
                             try:
                                 await set_screen(client, device_ip, True)
+                                logger.info("Pixoo screen ON")
                             except httpx.HTTPError:
                                 logger.debug("Failed to turn on Pixoo screen.")
+                        screen_initialized = True
                     signature = f"{track.id}:{track.title}:{track.artist}"
                     if signature != last_signature:
                         artwork = await fetch_artwork(
@@ -94,22 +97,36 @@ async def run_app(config: AppConfig) -> None:
                         )
                         await asyncio.to_thread(gif_path.write_bytes, gif_bytes)
                         if config.pixoo.play_on_device and device_ip:
-                            await play_gif(client, device_ip, f"{base_url.rstrip('/')}/gif")
+                                await play_gif(client, device_ip, f"{base_url.rstrip('/')}/gif")
                         if not config.ui.background:
                             render_track(track)
                         last_signature = signature
                     idle_streak = 0
                     last_playing = True
                 else:
+                    if (
+                        config.pixoo.play_on_device
+                        and device_ip
+                        and config.pixoo.auto_screen_off
+                        and not screen_initialized
+                    ):
+                        try:
+                            await set_screen(client, device_ip, False)
+                            logger.info("Pixoo screen OFF (idle at startup)")
+                        except httpx.HTTPError:
+                            logger.debug("Failed to turn off Pixoo screen on start.")
+                        screen_initialized = True
                     if last_playing and config.pixoo.play_on_device and device_ip:
                         if config.pixoo.auto_screen_off:
                             try:
                                 await set_screen(client, device_ip, False)
+                                logger.info("Pixoo screen OFF")
                             except httpx.HTTPError:
                                 logger.debug("Failed to turn off Pixoo screen.")
                         else:
                             try:
                                 await stop_gif(client, device_ip)
+                                logger.info("Pixoo display reset (stop GIF)")
                             except httpx.HTTPError:
                                 logger.debug("Failed to stop Pixoo GIF.")
                     last_signature = None
@@ -125,11 +142,13 @@ async def run_app(config: AppConfig) -> None:
                 if config.pixoo.auto_screen_off:
                     try:
                         await set_screen(client, device_ip, False)
+                        logger.info("Pixoo screen OFF (shutdown)")
                     except httpx.HTTPError:
                         logger.debug("Failed to turn off Pixoo screen on shutdown.")
                 else:
                     try:
                         await stop_gif(client, device_ip)
+                        logger.info("Pixoo display reset (shutdown)")
                     except httpx.HTTPError:
                         logger.debug("Failed to stop Pixoo GIF on shutdown.")
             server.should_exit = True
