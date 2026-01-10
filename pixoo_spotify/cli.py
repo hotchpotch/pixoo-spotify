@@ -21,6 +21,7 @@ from pixoo_spotify.fonts import (
 )
 from pixoo_spotify.gif import build_gif_bytes, load_font_registry
 from pixoo_spotify.models import TrackInfo
+from pixoo_spotify.net import find_open_port
 from pixoo_spotify.paths import get_auth_paths, get_fonts_dir, resolve_pixoo_spotify_config_path
 from pixoo_spotify.pixoo import discover_devices
 from pixoo_spotify.spotify import (
@@ -59,6 +60,13 @@ def resolve_config(config_path: Path | None, overrides: dict) -> AppConfig:
         default = Path("config.toml")
         config_path = default if default.exists() else None
     return AppConfig.from_sources(config_path, overrides)
+
+
+def resolve_config_path(config_path: Path | None) -> Path | None:
+    if config_path is None:
+        default = Path("config.toml")
+        return default if default.exists() else None
+    return config_path
 
 
 def build_overrides(**kwargs) -> dict:
@@ -186,6 +194,11 @@ def run(
         background=background,
     )
     config_obj = resolve_config(config, overrides)
+    if server_port is None and resolve_config_path(config) is None:
+        candidate = find_open_port(config_obj.server.host, 18080, 18099)
+        if candidate is not None:
+            config_obj.server = config_obj.server.model_copy(update={"port": candidate})
+            typer.echo(f"Using available port {candidate} (auto-selected).")
     asyncio.run(run_app(config_obj))
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 
 import httpx
@@ -10,10 +11,13 @@ from spotipy.exceptions import SpotifyException
 from pixoo_spotify.config import AppConfig
 from pixoo_spotify.gif import build_gif_bytes, fetch_artwork, load_font_registry
 from pixoo_spotify.models import TrackInfo
+from pixoo_spotify.net import local_ip_for_target
 from pixoo_spotify.pixoo import discover_devices, play_gif
 from pixoo_spotify.server import create_app
 from pixoo_spotify.spotify import SpotifyClient, retry_after_seconds, validate_spotify_config
 from pixoo_spotify.ui import render_track
+
+logger = logging.getLogger(__name__)
 
 
 async def run_app(config: AppConfig) -> None:
@@ -34,7 +38,6 @@ async def run_app(config: AppConfig) -> None:
     server = uvicorn.Server(server_config)
 
     spotify = SpotifyClient(config.spotify)
-    base_url = config.server.base_url()
     device_ip: str | None = config.pixoo.device_ip
 
     async with httpx.AsyncClient(timeout=10) as client:
@@ -42,6 +45,14 @@ async def run_app(config: AppConfig) -> None:
             devices = await discover_devices(client)
             if devices:
                 device_ip = devices[0].device_private_ip
+                logger.debug("Discovered Pixoo device: %s", device_ip)
+
+        base_url = config.server.base_url()
+        if config.server.public_base_url is None and device_ip:
+            local_ip = local_ip_for_target(device_ip)
+            if local_ip:
+                base_url = f"http://{local_ip}:{config.server.port}"
+                logger.debug("Resolved local base URL for Pixoo: %s", base_url)
 
         server_task = asyncio.create_task(server.serve())
         last_signature: str | None = None
