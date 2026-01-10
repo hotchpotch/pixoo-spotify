@@ -1,23 +1,18 @@
 from __future__ import annotations
 
+import importlib
 import json
 import locale
 import os
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:  # pragma: no cover
-    import tomllib
-else:
-    try:
-        import tomllib
-    except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
-        import tomli as tomllib
+import sys
 from enum import Enum
 from pathlib import Path
 from typing import Any
 
 from platformdirs import user_config_dir
 from pydantic import AliasChoices, BaseModel, Field, HttpUrl, field_validator, model_validator
+
+tomllib = importlib.import_module("tomllib" if sys.version_info >= (3, 11) else "tomli")
 
 
 class TextPosition(str, Enum):
