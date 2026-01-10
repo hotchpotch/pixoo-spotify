@@ -7,7 +7,7 @@ from pathlib import Path
 import httpx
 from spotipy.exceptions import SpotifyException
 
-from pixoo_spotify.config import AppConfig
+from pixoo_spotify.config import AppConfig, UiMode
 from pixoo_spotify.gif import build_gif_bytes, fetch_artwork, load_font_registry
 from pixoo_spotify.models import TrackInfo
 from pixoo_spotify.net import local_ip_for_target
@@ -21,9 +21,10 @@ logger = logging.getLogger(__name__)
 
 async def run_app(config: AppConfig, *, verbose: bool = False) -> None:
     ui = None
-    if not config.ui.background:
+    background = config.ui.mode == UiMode.text
+    if not background:
         ui = start_ui()
-    configure_logging(config.ui.background, verbose, ui, config.ui.log_format)
+    configure_logging(background, verbose, ui, config.ui.log_format)
 
     try:
         validate_spotify_config(config.spotify)

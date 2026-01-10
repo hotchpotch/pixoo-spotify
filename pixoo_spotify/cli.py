@@ -15,6 +15,7 @@ from pixoo_spotify.config import (
     PaletteMode,
     ScrollMode,
     TextPosition,
+    UiMode,
 )
 from pixoo_spotify.dummy import dummy_artwork, dummy_track
 from pixoo_spotify.fonts import (
@@ -113,7 +114,7 @@ def build_overrides(**kwargs) -> dict:
             "max_chars": kwargs.get("max_chars"),
         },
         "ui": {
-            "background": kwargs.get("background"),
+            "mode": kwargs.get("ui_mode"),
             "log_format": kwargs.get("log_format"),
         },
         "poll_interval": kwargs.get("poll_interval"),
@@ -121,49 +122,105 @@ def build_overrides(**kwargs) -> dict:
     }
 
 
-@app.command()
+@app.command(help="Run the Pixoo Spotify GIF server and optional device playback.")
 def run(
-    config: Path | None = typer.Option(None, "--config", help="Config file (toml/json)"),
-    client_id: str | None = typer.Option(None, "--client-id"),
+    config: Path | None = typer.Option(None, "--config", help="Config file (toml/json)."),
+    client_id: str | None = typer.Option(
+        None,
+        "--client-id",
+        help="Override cached Spotify client id (usually not needed).",
+    ),
     client_secret: str | None = typer.Option(
-        None, envvar="SPOTIFY_CLIENT_SECRET", help="Optional (unused for PKCE)"
+        None,
+        envvar="SPOTIFY_CLIENT_SECRET",
+        help="Optional. Unused for PKCE and ignored during normal runs.",
     ),
-    redirect_uri: str | None = typer.Option(None),
-    scope: str | None = typer.Option(None),
+    redirect_uri: str | None = typer.Option(
+        None, help="Redirect URI for Spotify auth (rarely needed for run)."
+    ),
+    scope: str | None = typer.Option(
+        None, help="Spotify OAuth scopes (advanced; usually leave default)."
+    ),
     language: str | None = typer.Option(
-        None, "--language", help="Preferred Spotify metadata language (Accept-Language)"
+        None, "--language", help="Preferred Spotify metadata language (Accept-Language)."
     ),
-    cache_path: Path | None = typer.Option(None),
-    open_browser: bool = typer.Option(True, "--open-browser/--no-open-browser"),
-    device_ip: str | None = typer.Option(None),
-    discover: bool = typer.Option(True, "--discover/--no-discover"),
-    play_on_device: bool = typer.Option(True, "--play-on-device/--no-play-on-device"),
+    cache_path: Path | None = typer.Option(
+        None, help="Path to Spotify token cache (auto if omitted)."
+    ),
+    open_browser: bool = typer.Option(
+        True,
+        "--open-browser/--no-open-browser",
+        help="Open browser if re-auth is needed.",
+    ),
+    device_ip: str | None = typer.Option(None, help="Pixoo device IP address."),
+    discover: bool = typer.Option(
+        True, "--discover/--no-discover", help="Auto-discover Pixoo on LAN."
+    ),
+    play_on_device: bool = typer.Option(
+        True, "--play-on-device/--no-play-on-device", help="Send GIF to Pixoo."
+    ),
     auto_screen_off: bool = typer.Option(
-        False, "--auto-screen-off/--no-auto-screen-off", help="Turn off screen when idle"
+        False,
+        "--auto-screen-off/--no-auto-screen-off",
+        help="Turn off screen when idle.",
     ),
-    server_host: str | None = typer.Option(None),
-    server_port: int | None = typer.Option(None),
-    public_base_url: str | None = typer.Option(None),
-    gif_size: int | None = typer.Option(None),
-    image_size: int | None = typer.Option(None, "--image-size"),
-    gif_fps: int | None = typer.Option(None),
-    artwork_only: bool = typer.Option(False, "--artwork-only/--with-text"),
-    scroll_mode: ScrollMode | None = typer.Option(None, "--scroll-mode"),
-    bounce_pause_frames: int | None = typer.Option(None, "--bounce-pause-frames"),
-    gif_colors: int | None = typer.Option(None, "--gif-colors"),
-    gif_dither: DitherMode | None = typer.Option(None, "--gif-dither"),
-    gif_palette: PaletteMode | None = typer.Option(None, "--gif-palette"),
-    gif_optimize: bool | None = typer.Option(None, "--gif-optimize/--no-gif-optimize"),
-    overlay_color: str | None = typer.Option(None, "--overlay-color"),
-    text_color: str | None = typer.Option(None, "--text-color"),
-    text_shadow_color: str | None = typer.Option(None, "--text-shadow-color"),
-    text_position: TextPosition | None = typer.Option(None, "--text-position"),
-    gif_output: Path | None = typer.Option(None),
-    max_chars: int | None = typer.Option(None),
-    poll_interval: float | None = typer.Option(None),
-    idle_poll_interval: float | None = typer.Option(None, "--idle-poll-interval"),
-    background: bool = typer.Option(False, "--background/--foreground"),
-    log_format: LogFormat = typer.Option(LogFormat.simple, "--log-format"),
+    server_host: str | None = typer.Option(
+        None, help="HTTP server host (default 0.0.0.0)."
+    ),
+    server_port: int | None = typer.Option(
+        None, help="HTTP server port (auto-select if omitted)."
+    ),
+    public_base_url: str | None = typer.Option(
+        None, help="Public base URL used for Pixoo to fetch the GIF."
+    ),
+    gif_size: int | None = typer.Option(None, help="GIF canvas size (16/32/64)."),
+    image_size: int | None = typer.Option(
+        None, "--image-size", help="Artwork source size (16/32/64)."
+    ),
+    gif_fps: int | None = typer.Option(None, help="GIF frames per second."),
+    artwork_only: bool = typer.Option(
+        False, "--artwork-only/--with-text", help="Render only artwork (no text)."
+    ),
+    scroll_mode: ScrollMode | None = typer.Option(
+        None, "--scroll-mode", help="Text scroll mode (loop/bounce)."
+    ),
+    bounce_pause_frames: int | None = typer.Option(
+        None, "--bounce-pause-frames", help="Pause frames at bounce edges."
+    ),
+    gif_colors: int | None = typer.Option(None, "--gif-colors", help="GIF palette size."),
+    gif_dither: DitherMode | None = typer.Option(
+        None, "--gif-dither", help="GIF dither mode."
+    ),
+    gif_palette: PaletteMode | None = typer.Option(
+        None, "--gif-palette", help="Palette mode (auto/shared)."
+    ),
+    gif_optimize: bool | None = typer.Option(
+        None, "--gif-optimize/--no-gif-optimize", help="Enable GIF optimization."
+    ),
+    overlay_color: str | None = typer.Option(
+        None, "--overlay-color", help="Overlay color in #RRGGBBAA."
+    ),
+    text_color: str | None = typer.Option(
+        None, "--text-color", help="Text color in #RRGGBBAA."
+    ),
+    text_shadow_color: str | None = typer.Option(
+        None, "--text-shadow-color", help="Text shadow color in #RRGGBBAA."
+    ),
+    text_position: TextPosition | None = typer.Option(
+        None, "--text-position", help="Text position on the canvas."
+    ),
+    gif_output: Path | None = typer.Option(None, help="Output path for generated GIF."),
+    max_chars: int | None = typer.Option(None, help="Max characters per line."),
+    poll_interval: float | None = typer.Option(
+        None, help="Polling interval seconds."
+    ),
+    idle_poll_interval: float | None = typer.Option(
+        None, "--idle-poll-interval", help="Polling interval when idle."
+    ),
+    ui_mode: UiMode = typer.Option(UiMode.rich, "--ui", help="UI mode (rich/text)."),
+    log_format: LogFormat = typer.Option(
+        LogFormat.simple, "--log-format", help="Log format (simple/basic)."
+    ),
 ) -> None:
     config_path = resolve_pixoo_spotify_config_path(PIXOO_SPOTIFY_CONFIG_PATH)
     resolved_client_id = client_id or load_cached_client_id(config_path)
@@ -208,7 +265,7 @@ def run(
         max_chars=max_chars,
         poll_interval=poll_interval,
         idle_poll_interval=idle_poll_interval,
-        background=background,
+        ui_mode=ui_mode,
         log_format=log_format,
     )
     config_obj = resolve_config(config, overrides)

@@ -39,6 +39,11 @@ class LogFormat(str, Enum):
     basic = "basic"
 
 
+class UiMode(str, Enum):
+    rich = "rich"
+    text = "text"
+
+
 class SpotifyConfig(BaseModel):
     client_id: str | None = None
     client_secret: str | None = None
@@ -165,8 +170,17 @@ class GifConfig(BaseModel):
 
 
 class UiConfig(BaseModel):
-    background: bool = False
+    mode: UiMode = UiMode.rich
+    background: bool | None = None
     log_format: LogFormat = LogFormat.simple
+
+    @model_validator(mode="after")
+    def resolve_legacy_background(self) -> UiConfig:
+        if self.background is None:
+            return self
+        self.mode = UiMode.text if self.background else UiMode.rich
+        self.background = None
+        return self
 
 
 class AppConfig(BaseModel):
