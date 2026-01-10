@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+import queue
+import threading
+import webbrowser
 from pathlib import Path
+from urllib.parse import urlparse
 
 import spotipy
 from platformdirs import user_config_dir
 from pydantic import ValidationError
-from spotipy.exceptions import SpotifyException
+from spotipy.exceptions import SpotifyException, SpotifyOauthError, SpotifyStateError
+from spotipy.oauth2 import start_local_http_server
 
 from pixoo_spotify.config import SpotifyConfig
 from pixoo_spotify.models import TrackInfo
@@ -54,21 +59,102 @@ class SpotifyClient:
 
     def authorize_interactive(self) -> str:
         if not self._config.open_browser:
-            url = self._auth_manager.get_authorize_url()
-            print("Go to the following URL and authorize the app:")
-            print(url)
-            redirect = input("Enter the URL you were redirected to: ").strip()
-            if not redirect:
-                raise RuntimeError("No redirect URL provided.")
-            _state, code = self._auth_manager.parse_auth_response_url(redirect)
-            if not code:
-                raise RuntimeError("Failed to parse authorization code.")
-            token = self._auth_manager.get_access_token(code=code)
+            return self._authorize_with_manual_redirect()
+        url = self._auth_manager.get_authorize_url()
+        print("Opening a browser for Spotify authorization.")
+        print("If the redirect does not complete, you can paste the URL here at any time.")
+        print(url)
+        redirect_info = urlparse(self._config.redirect_uri)
+        code: str | None = None
+        if (
+            redirect_info.scheme == "http"
+            and redirect_info.hostname in ("127.0.0.1", "localhost")
+            and redirect_info.port
+        ):
+            code = self._wait_for_local_code(redirect_info.port, url)
         else:
-            token = self._auth_manager.get_access_token()
+            self._open_browser(url)
+        if not code:
+            code = self._prompt_for_redirect_code()
+        token = self._auth_manager.get_access_token(code=code, check_cache=False)
         if not token:
             raise RuntimeError("Failed to fetch access token.")
         return str(self._config.cache_path)
+
+    def _authorize_with_manual_redirect(self) -> str:
+        url = self._auth_manager.get_authorize_url()
+        print("Go to the following URL and authorize the app:")
+        print(url)
+        code = self._prompt_for_redirect_code()
+        token = self._auth_manager.get_access_token(code=code, check_cache=False)
+        if not token:
+            raise RuntimeError("Failed to fetch access token.")
+        return str(self._config.cache_path)
+
+    def _prompt_for_redirect_code(self) -> str:
+        print("If the redirect did not work, paste the full redirected URL here.")
+        redirect = input("Enter the URL you were redirected to: ").strip()
+        if not redirect:
+            raise RuntimeError("No redirect URL provided.")
+        _state, code = self._auth_manager.parse_auth_response_url(redirect)
+        if not code:
+            raise RuntimeError("Failed to parse authorization code.")
+        return code
+
+    def _wait_for_local_code(
+        self,
+        port: int,
+        url: str,
+    ) -> str | None:
+        server = start_local_http_server(port)
+        server.timeout = 1.0
+        input_queue: queue.Queue[str] = queue.Queue()
+
+        def _read_input() -> None:
+            try:
+                redirect = input(
+                    "Paste the full redirected URL here (optional), then press Enter: "
+                ).strip()
+            except EOFError:
+                return
+            if redirect:
+                input_queue.put(redirect)
+
+        try:
+            self._open_browser(url)
+            threading.Thread(target=_read_input, daemon=True).start()
+            while server.auth_code is None and server.error is None:
+                server.handle_request()
+                try:
+                    redirect = input_queue.get_nowait()
+                except queue.Empty:
+                    redirect = None
+                if redirect:
+                    _state, code = self._auth_manager.parse_auth_response_url(redirect)
+                    if not code:
+                        raise RuntimeError("Failed to parse authorization code.")
+                    return code
+            server_state = getattr(server, "state", None)
+            if (
+                self._auth_manager.state is not None
+                and server_state is not None
+                and server_state != self._auth_manager.state
+            ):
+                raise SpotifyStateError(self._auth_manager.state, server_state)
+            if server.auth_code is not None:
+                return server.auth_code
+            if server.error is not None:
+                raise SpotifyOauthError(str(server.error))
+            return None
+        finally:
+            server.server_close()
+
+    @staticmethod
+    def _open_browser(url: str) -> None:
+        try:
+            webbrowser.open(url)
+        except Exception:
+            pass
 
 
 def validate_spotify_config(config: SpotifyConfig) -> None:
