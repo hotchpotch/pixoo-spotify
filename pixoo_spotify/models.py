@@ -27,7 +27,7 @@ class TrackInfo(BaseModel):
 
     @property
     def lines(self) -> list[str]:
-        return [self.artist, self.title]
+        return [self.title, self.artist]
 
     @classmethod
     def from_spotify(cls, payload: dict[str, Any]) -> TrackInfo | None:
