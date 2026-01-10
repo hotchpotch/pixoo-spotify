@@ -96,7 +96,9 @@ class GifConfig(BaseModel):
     gif_optimize: bool = False
     position: TextPosition = TextPosition.bottom_left
     max_chars: int = Field(40, ge=1, le=80)
-    output_path: Path = Path("output/latest.gif")
+    output_path: Path = Field(
+        default_factory=lambda: Path(user_config_dir("pixoo-spotify")) / "output" / "latest.gif"
+    )
     background_color: tuple[int, int, int] = (120, 120, 120)
     overlay_color: str | None = "#00000078"
     overlay_opacity: int = Field(120, ge=0, le=255)

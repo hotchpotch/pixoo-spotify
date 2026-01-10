@@ -43,10 +43,10 @@ def _make_handler(gif_path: Path) -> type[BaseHTTPRequestHandler]:
     class GifHandler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
             if self.path == "/" or self.path.startswith("/?"):
-                payload = json.dumps({"status": "ok", "gif": "/gif"}).encode("utf-8")
+                payload = json.dumps({"status": "ok", "gif": "/spotify_gif"}).encode("utf-8")
                 self._send_bytes(HTTPStatus.OK, payload, "application/json")
                 return
-            if self.path.startswith("/gif"):
+            if self.path.split("?", 1)[0].startswith("/spotify_gif"):
                 if not gif_path.exists():
                     self._send_bytes(HTTPStatus.NOT_FOUND, b"GIF not ready", "text/plain")
                     return

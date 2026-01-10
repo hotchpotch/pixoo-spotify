@@ -40,14 +40,16 @@ def test_play_gif_request() -> None:
         body = json.loads(request.content.decode("utf-8"))
         assert body["Command"] == "Device/PlayTFGif"
         assert body["FileType"] == 2
-        assert body["FileName"] == "http://example.com/gif"
+        assert body["FileName"] == "http://example.com/spotify_gif?123"
         return httpx.Response(200, json={"error_code": 0})
 
     transport = httpx.MockTransport(handler)
 
     async def run() -> None:
         async with httpx.AsyncClient(transport=transport) as client:
-            response = await play_gif(client, "192.168.24.83", "http://example.com/gif")
+            response = await play_gif(
+                client, "192.168.24.83", "http://example.com/spotify_gif?123"
+            )
             assert response["error_code"] == 0
 
     asyncio.run(run())

@@ -193,7 +193,7 @@ def run(
     server_port: int | None = typer.Option(
         None,
         help="HTTP server port (auto-select if omitted).",
-        show_default=DEFAULT_CONFIG.server.port,
+        show_default=str(DEFAULT_CONFIG.server.port),
     ),
     public_base_url: str | None = typer.Option(
         None, help="Public base URL used for Pixoo to fetch the GIF.", show_default=True
@@ -201,7 +201,7 @@ def run(
     gif_size: int | None = typer.Option(
         None,
         help="GIF canvas size (16/32/64).",
-        show_default=DEFAULT_CONFIG.gif.size,
+        show_default=str(DEFAULT_CONFIG.gif.size),
     ),
     image_size: int | None = typer.Option(
         None,
@@ -210,7 +210,7 @@ def run(
         show_default="same as --gif-size",
     ),
     gif_fps: int | None = typer.Option(
-        None, help="GIF frames per second.", show_default=DEFAULT_CONFIG.gif.fps
+        None, help="GIF frames per second.", show_default=str(DEFAULT_CONFIG.gif.fps)
     ),
     artwork_only: bool = typer.Option(
         False,
@@ -228,13 +228,13 @@ def run(
         None,
         "--bounce-pause-frames",
         help="Pause frames at bounce edges.",
-        show_default=DEFAULT_CONFIG.gif.bounce_pause_frames,
+        show_default=str(DEFAULT_CONFIG.gif.bounce_pause_frames),
     ),
     gif_colors: int | None = typer.Option(
         None,
         "--gif-colors",
         help="GIF palette size.",
-        show_default=DEFAULT_CONFIG.gif.gif_colors,
+        show_default=str(DEFAULT_CONFIG.gif.gif_colors),
     ),
     gif_dither: DitherMode | None = typer.Option(
         None,
@@ -267,7 +267,7 @@ def run(
         None,
         "--overlay-color",
         help="Overlay color in #RRGGBBAA.",
-        show_default=DEFAULT_CONFIG.gif.overlay_color,
+        show_default=DEFAULT_CONFIG.gif.overlay_color or "none",
     ),
     text_color: str | None = typer.Option(
         None,
@@ -293,16 +293,16 @@ def run(
         show_default=str(DEFAULT_CONFIG.gif.output_path),
     ),
     max_chars: int | None = typer.Option(
-        None, help="Max characters per line.", show_default=DEFAULT_CONFIG.gif.max_chars
+        None, help="Max characters per line.", show_default=str(DEFAULT_CONFIG.gif.max_chars)
     ),
     poll_interval: float | None = typer.Option(
-        None, help="Polling interval seconds.", show_default=DEFAULT_CONFIG.poll_interval
+        None, help="Polling interval seconds.", show_default=str(DEFAULT_CONFIG.poll_interval)
     ),
     idle_poll_interval: float | None = typer.Option(
         None,
         "--idle-poll-interval",
         help="Polling interval when idle.",
-        show_default=DEFAULT_CONFIG.idle_poll_interval,
+        show_default=str(DEFAULT_CONFIG.idle_poll_interval),
     ),
     ui_mode: UiMode = typer.Option(
         UiMode.rich, "--ui", help="UI mode (rich/text).", show_default=True
@@ -533,7 +533,7 @@ def demo(
         False, "--artwork-only/--with-text", show_default=DEFAULT_CONFIG.gif.artwork_only
     ),
     gif_colors: int | None = typer.Option(
-        None, "--gif-colors", show_default=DEFAULT_CONFIG.gif.gif_colors
+        None, "--gif-colors", show_default=str(DEFAULT_CONFIG.gif.gif_colors)
     ),
     gif_dither: DitherMode | None = typer.Option(
         None, "--gif-dither", show_default=DEFAULT_CONFIG.gif.gif_dither.value
@@ -615,7 +615,7 @@ def gif(
         False, "--artwork-only/--with-text", show_default=DEFAULT_CONFIG.gif.artwork_only
     ),
     gif_colors: int | None = typer.Option(
-        None, "--gif-colors", show_default=DEFAULT_CONFIG.gif.gif_colors
+        None, "--gif-colors", show_default=str(DEFAULT_CONFIG.gif.gif_colors)
     ),
     gif_dither: DitherMode | None = typer.Option(
         None, "--gif-dither", show_default=DEFAULT_CONFIG.gif.gif_dither.value
