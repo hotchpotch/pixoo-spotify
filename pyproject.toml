@@ -5,7 +5,6 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.128.0",
     "httpx>=0.28.1",
     "langdetect>=1.0.9",
     "pillow>=12.1.0",
@@ -15,7 +14,6 @@ dependencies = [
     "rich>=14.2.0",
     "spotipy>=2.25.2",
     "typer>=0.21.1",
-    "uvicorn>=0.40.0",
 ]
 
 [project.scripts]

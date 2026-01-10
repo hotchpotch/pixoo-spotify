@@ -5,7 +5,6 @@ import logging
 from pathlib import Path
 
 import httpx
-import uvicorn
 from spotipy.exceptions import SpotifyException
 
 from pixoo_spotify.config import AppConfig
@@ -13,7 +12,7 @@ from pixoo_spotify.gif import build_gif_bytes, fetch_artwork, load_font_registry
 from pixoo_spotify.models import TrackInfo
 from pixoo_spotify.net import local_ip_for_target
 from pixoo_spotify.pixoo import discover_devices, play_gif, set_screen, stop_gif
-from pixoo_spotify.server import create_app
+from pixoo_spotify.server import GifHttpServer
 from pixoo_spotify.spotify import SpotifyClient, retry_after_seconds, validate_spotify_config
 from pixoo_spotify.ui import configure_logging, render_track, start_ui, stop_ui
 
@@ -34,15 +33,7 @@ async def run_app(config: AppConfig, *, verbose: bool = False) -> None:
         fonts_dir = Path(config.spotify.cache_path).parent / "fonts"
         font_registry = await load_font_registry(fonts_dir)
 
-        app = create_app(gif_path)
-        server_config = uvicorn.Config(
-            app,
-            host=config.server.host,
-            port=config.server.port,
-            log_level="info",
-            log_config=None,
-        )
-        server = uvicorn.Server(server_config)
+        server = GifHttpServer(gif_path, config.server.host, config.server.port)
 
         spotify = SpotifyClient(config.spotify)
         device_ip: str | None = config.pixoo.device_ip
@@ -66,13 +57,13 @@ async def run_app(config: AppConfig, *, verbose: bool = False) -> None:
             if config.server.public_base_url is not None:
                 logger.info("Using configured public base URL: %s", base_url)
 
-            server_task = asyncio.create_task(server.serve())
+            server.start()
             last_signature: str | None = None
             last_playing = False
             screen_initialized = False
             idle_streak = 0
             try:
-                while not server.should_exit:
+                while True:
                     try:
                         track = await spotify.current_track()
                     except SpotifyException as exc:
@@ -157,8 +148,7 @@ async def run_app(config: AppConfig, *, verbose: bool = False) -> None:
                             logger.info("Pixoo display reset (shutdown)")
                         except httpx.HTTPError:
                             logger.debug("Failed to stop Pixoo GIF on shutdown.")
-                server.should_exit = True
-                await server_task
+                server.stop()
     finally:
         if ui is not None:
             stop_ui()

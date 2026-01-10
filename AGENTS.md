@@ -6,7 +6,7 @@
 - Dev tools must live in the `dev` extra. Update via `uv add --optional dev <pkgs>` (tox runs with `uv run --extra dev tox`).
 - Prefer async/await for IO. Keep Pydantic models for config and data payloads.
 - CLI uses Typer. Non-background mode should show a small Rich UI panel (see `pixoo_spotify/ui.py`).
-- HTTP server is FastAPI + Uvicorn.
+- HTTP server uses `http.server` (ThreadingHTTPServer) to keep it lightweight.
 - Spotify auth uses PKCE (no client secret required). Default redirect is `http://127.0.0.1:8888/callback`.
 - `auth` requires `--client-id`; the value is cached under the platform config directory.
 - Config directory can be overridden with `--config-path` (global option).

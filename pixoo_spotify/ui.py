@@ -38,17 +38,12 @@ class AppUI:
         self._console = Console()
         self._layout = Layout()
         self._track_panel = Panel("No track", title="Now Playing", border_style="green")
-        self._http_log = LogBuffer("HTTP Server Log")
-        self._app_log = LogBuffer("Application Log")
+        self._log = LogBuffer("Logs")
         self._lock = threading.Lock()
 
         self._layout.split_column(
             Layout(name="track", size=9),
             Layout(name="logs"),
-        )
-        self._layout["logs"].split_row(
-            Layout(name="http"),
-            Layout(name="app"),
         )
         self._refresh()
         self._live = Live(self._layout, console=self._console, refresh_per_second=4)
@@ -72,19 +67,14 @@ class AppUI:
             self._track_panel = panel
         self._refresh()
 
-    def append_app_log(self, line: str) -> None:
-        self._app_log.append(line)
-        self._refresh()
-
-    def append_http_log(self, line: str) -> None:
-        self._http_log.append(line)
+    def append_log(self, line: str) -> None:
+        self._log.append(line)
         self._refresh()
 
     def _refresh(self) -> None:
         with self._lock:
             self._layout["track"].update(self._track_panel)
-        self._layout["http"].update(self._http_log.render())
-        self._layout["app"].update(self._app_log.render())
+        self._layout["logs"].update(self._log.render())
 
 
 class UILogHandler(logging.Handler):
@@ -144,29 +134,17 @@ def configure_logging(background: bool, verbose: bool, ui: AppUI | None) -> None
 
     if background or ui is None:
         logging.basicConfig(level=level, format=log_format, datefmt=date_format)
-        for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
-            log = logging.getLogger(name)
-            log.setLevel(level)
-            log.propagate = True
         return
 
     logging.basicConfig(level=logging.WARNING)
-    app_handler = UILogHandler(ui.append_app_log, level=level)
+    app_handler = UILogHandler(ui.append_log, level=level)
     app_handler.setFormatter(formatter)
-    http_handler = UILogHandler(ui.append_http_log, level=level)
-    http_handler.setFormatter(formatter)
 
     app_logger = logging.getLogger("pixoo_spotify")
     app_logger.handlers = [app_handler]
     app_logger.setLevel(level)
     app_logger.propagate = False
 
-    uvicorn_error = logging.getLogger("uvicorn.error")
-    uvicorn_error.handlers = [app_handler]
-    uvicorn_error.setLevel(level)
-    uvicorn_error.propagate = False
-
-    uvicorn_access = logging.getLogger("uvicorn.access")
-    uvicorn_access.handlers = [http_handler]
-    uvicorn_access.setLevel(level)
-    uvicorn_access.propagate = False
+    http_logger = logging.getLogger("pixoo_spotify.http")
+    http_logger.setLevel(level)
+    http_logger.propagate = True

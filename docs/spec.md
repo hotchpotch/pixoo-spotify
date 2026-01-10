@@ -12,7 +12,7 @@
   - fps は 8
 - フォントは config ディレクトリ配下 `fonts/` に保存
 - 行ごとに言語判定（langdetect）し、対応する言語コードのフォントがあれば使用（なければ fallback）
-- HTTP サーバは FastAPI + Uvicorn（async）
+- HTTP サーバは軽量な `http.server` ベース
 - CLI は Typer、型は Pydantic / type hint を徹底
 - Pixoo デバイス検出は `https://app.divoom-gz.com/Device/ReturnSameLANDevice`
 - Pixoo への再生指示は `Device/PlayTFGif` を利用
@@ -32,7 +32,7 @@
 - `pixoo_spotify/pixoo.py`
   - Pixoo デバイス発見 / PlayTFGif 呼び出し
 - `pixoo_spotify/server.py`
-  - FastAPI で `/gif` を配信
+  - `http.server` で `/gif` を配信
 - `pixoo_spotify/config.py`
   - Pydantic 設定、config.toml/json 対応
 - `pixoo_spotify/ui.py`
@@ -43,7 +43,7 @@
   - GIF 生成・設定マージのテスト
 
 ### 依存関係
-- Runtime: `fastapi`, `uvicorn`, `typer`, `pydantic`, `spotipy`, `httpx`, `pillow`, `langdetect`, `rich`
+- Runtime: `typer`, `pydantic`, `spotipy`, `httpx`, `pillow`, `langdetect`, `rich`
 - Dev: `pytest`, `ruff`, `ty`, `tox`, `tox-uv`
 - dev extra に登録済み: `uv run --extra dev tox`
 
