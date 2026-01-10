@@ -23,10 +23,14 @@ async def run_app(config: AppConfig, *, verbose: bool = False) -> None:
     ui = None
     if not config.ui.background:
         ui = start_ui()
-    configure_logging(config.ui.background, verbose, ui)
+    configure_logging(config.ui.background, verbose, ui, config.ui.log_format)
 
     try:
         validate_spotify_config(config.spotify)
+        if config.spotify.language:
+            logger.info("Spotify language: %s", config.spotify.language)
+        else:
+            logger.info("Spotify language: default (no explicit language)")
         gif_path = config.gif.output_path
         gif_path.parent.mkdir(parents=True, exist_ok=True)
 

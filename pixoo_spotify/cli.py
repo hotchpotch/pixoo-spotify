@@ -8,7 +8,14 @@ import typer
 from spotipy.exceptions import SpotifyOauthError
 
 from pixoo_spotify.app import generate_gif_once, run_app
-from pixoo_spotify.config import AppConfig, DitherMode, PaletteMode, ScrollMode, TextPosition
+from pixoo_spotify.config import (
+    AppConfig,
+    DitherMode,
+    LogFormat,
+    PaletteMode,
+    ScrollMode,
+    TextPosition,
+)
 from pixoo_spotify.dummy import dummy_artwork, dummy_track
 from pixoo_spotify.fonts import (
     FUSION_PIXEL_FONT_LICENSE_URL,
@@ -72,6 +79,7 @@ def build_overrides(**kwargs) -> dict:
             "client_secret": kwargs.get("client_secret"),
             "redirect_uri": kwargs.get("redirect_uri"),
             "scope": kwargs.get("scope"),
+            "language": kwargs.get("language"),
             "cache_path": kwargs.get("cache_path"),
             "open_browser": kwargs.get("open_browser"),
         },
@@ -104,7 +112,10 @@ def build_overrides(**kwargs) -> dict:
         "output_path": kwargs.get("gif_output"),
             "max_chars": kwargs.get("max_chars"),
         },
-        "ui": {"background": kwargs.get("background")},
+        "ui": {
+            "background": kwargs.get("background"),
+            "log_format": kwargs.get("log_format"),
+        },
         "poll_interval": kwargs.get("poll_interval"),
         "idle_poll_interval": kwargs.get("idle_poll_interval"),
     }
@@ -119,6 +130,9 @@ def run(
     ),
     redirect_uri: str | None = typer.Option(None),
     scope: str | None = typer.Option(None),
+    language: str | None = typer.Option(
+        None, "--language", help="Preferred Spotify metadata language (Accept-Language)"
+    ),
     cache_path: Path | None = typer.Option(None),
     open_browser: bool = typer.Option(True, "--open-browser/--no-open-browser"),
     device_ip: str | None = typer.Option(None),
@@ -149,6 +163,7 @@ def run(
     poll_interval: float | None = typer.Option(None),
     idle_poll_interval: float | None = typer.Option(None, "--idle-poll-interval"),
     background: bool = typer.Option(False, "--background/--foreground"),
+    log_format: LogFormat = typer.Option(LogFormat.simple, "--log-format"),
 ) -> None:
     config_path = resolve_pixoo_spotify_config_path(PIXOO_SPOTIFY_CONFIG_PATH)
     resolved_client_id = client_id or load_cached_client_id(config_path)
@@ -165,6 +180,7 @@ def run(
         client_secret=client_secret,
         redirect_uri=redirect_uri,
         scope=scope,
+        language=language,
         cache_path=cache_path,
         open_browser=open_browser,
         device_ip=device_ip,
@@ -193,6 +209,7 @@ def run(
         poll_interval=poll_interval,
         idle_poll_interval=idle_poll_interval,
         background=background,
+        log_format=log_format,
     )
     config_obj = resolve_config(config, overrides)
     if server_port is None and resolve_config_path(config) is None:

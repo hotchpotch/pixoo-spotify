@@ -33,7 +33,10 @@ class SpotifyClient:
             cache_path=str(cache_path),
             open_browser=config.open_browser,
         )
-        self._client = spotipy.Spotify(auth_manager=self._auth_manager)
+        client_kwargs = {"auth_manager": self._auth_manager}
+        if config.language:
+            client_kwargs["language"] = config.language
+        self._client = spotipy.Spotify(**client_kwargs)
 
     async def current_track(self) -> TrackInfo | None:
         payload = await asyncio.to_thread(self._client.current_user_playing_track)

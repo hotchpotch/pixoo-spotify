@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import locale
+import os
 import tomllib
 from enum import Enum
 from pathlib import Path
@@ -32,15 +34,29 @@ class PaletteMode(str, Enum):
     shared = "shared"
 
 
+class LogFormat(str, Enum):
+    simple = "simple"
+    basic = "basic"
+
+
 class SpotifyConfig(BaseModel):
     client_id: str | None = None
     client_secret: str | None = None
     redirect_uri: str = "http://127.0.0.1:8888/callback"
     scope: str = "user-read-currently-playing user-read-playback-state"
+    language: str | None = Field(default_factory=lambda: resolve_default_language())
     cache_path: Path = Field(
         default_factory=lambda: Path(user_config_dir("pixoo-spotify")) / "spotify_token.json"
     )
     open_browser: bool = True
+
+    @field_validator("language", mode="before")
+    @classmethod
+    def normalize_language(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = normalize_language_tag(str(value))
+        return normalized or None
 
 
 class PixooConfig(BaseModel):
@@ -150,6 +166,7 @@ class GifConfig(BaseModel):
 
 class UiConfig(BaseModel):
     background: bool = False
+    log_format: LogFormat = LogFormat.simple
 
 
 class AppConfig(BaseModel):
@@ -194,6 +211,37 @@ def merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
         else:
             merged[key] = value
     return merged
+
+
+def normalize_language_tag(value: str) -> str:
+    text = value.strip()
+    if not text or text.upper() in {"C", "POSIX"}:
+        return ""
+    text = text.split(".", 1)[0]
+    text = text.split("@", 1)[0]
+    text = text.replace("_", "-")
+    parts = [part for part in text.split("-") if part]
+    if not parts:
+        return ""
+    parts[0] = parts[0].lower()
+    if len(parts) >= 2:
+        parts[1] = parts[1].upper()
+    return "-".join(parts)
+
+
+def resolve_default_language() -> str | None:
+    for key in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        value = os.environ.get(key)
+        if value:
+            normalized = normalize_language_tag(value)
+            if normalized:
+                return normalized
+    value, _encoding = locale.getlocale()
+    if value:
+        normalized = normalize_language_tag(value)
+        if normalized:
+            return normalized
+    return None
 
 
 def _strip_none(value: Any) -> Any:

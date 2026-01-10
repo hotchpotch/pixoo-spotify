@@ -20,8 +20,8 @@ def test_spotify_cache_dir_created(tmp_path, monkeypatch) -> None:
             created["cache_path"] = kwargs.get("cache_path")
 
     class DummySpotify:
-        def __init__(self, auth_manager):
-            self.auth_manager = auth_manager
+        def __init__(self, **kwargs):
+            self.auth_manager = kwargs.get("auth_manager")
 
     monkeypatch.setattr(spotipy, "SpotifyPKCE", DummyPKCE)
     monkeypatch.setattr(spotipy, "Spotify", DummySpotify)
