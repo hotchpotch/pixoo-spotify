@@ -209,8 +209,10 @@ def build_frames(
         heights.append(height)
 
     line_height = max(heights, default=8)
+    line_gap = 1
+    line_step = line_height + line_gap
     shadow_extra = 1 if shadow_rgba is not None else 0
-    text_area_height = line_height * len(lines) + shadow_extra
+    text_area_height = line_height * len(lines) + line_gap * max(len(lines) - 1, 0) + shadow_extra
     origin_y = position_origin_y(config.position, size, text_area_height, config.margin)
 
     margin_x = config.margin + (1 if config.scroll_mode == ScrollMode.bounce else 0)
@@ -295,7 +297,7 @@ def build_frames(
                     direction=direction,
                 )
                 x = origin_x + offset
-            line_top = origin_y + idx * line_height
+            line_top = origin_y + idx * line_step
             y = line_top - offset_y
             draw_scrolling_text(
                 draw,
