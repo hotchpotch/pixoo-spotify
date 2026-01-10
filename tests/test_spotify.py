@@ -1,11 +1,10 @@
 import spotipy
 from pixoo_spotify.config import ServerConfig, SpotifyConfig
+from pixoo_spotify.paths import get_auth_paths, resolve_pixoo_spotify_config_path
 from pixoo_spotify.spotify import (
     SpotifyClient,
     auth_files_exist,
-    get_auth_paths,
     load_cached_client_id,
-    resolve_pixoo_spotify_config_path,
     retry_after_seconds,
     save_client_id,
 )

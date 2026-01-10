@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from pathlib import Path
 
@@ -10,15 +11,22 @@ from spotipy.exceptions import SpotifyOauthError
 from pixoo_spotify.app import generate_gif_once, run_app
 from pixoo_spotify.config import AppConfig, DitherMode, PaletteMode, ScrollMode, TextPosition
 from pixoo_spotify.dummy import dummy_artwork, dummy_track
-from pixoo_spotify.gif import build_gif_bytes, default_font_config, load_font_registry
+from pixoo_spotify.fonts import (
+    FUSION_PIXEL_FONT_LICENSE_URL,
+    FUSION_PIXEL_FONT_REPO,
+    FontInstallError,
+    install_font_for_lang,
+    install_recommended_fonts,
+    validate_lang_code,
+)
+from pixoo_spotify.gif import build_gif_bytes, load_font_registry
 from pixoo_spotify.models import TrackInfo
+from pixoo_spotify.paths import get_auth_paths, get_fonts_dir, resolve_pixoo_spotify_config_path
 from pixoo_spotify.pixoo import discover_devices
 from pixoo_spotify.spotify import (
     SpotifyClient,
     auth_files_exist,
-    get_auth_paths,
     load_cached_client_id,
-    resolve_pixoo_spotify_config_path,
     save_client_id,
     validate_spotify_config,
 )
@@ -35,9 +43,15 @@ app = typer.Typer(
 @app.callback()
 def global_options(
     config_path: Path | None = typer.Option(None, "--config-path"),
+    verbose: bool = typer.Option(False, "--verbose", help="Enable debug logging"),
 ) -> None:
     global PIXOO_SPOTIFY_CONFIG_PATH
     PIXOO_SPOTIFY_CONFIG_PATH = config_path
+    if verbose:
+        logging.basicConfig(level=logging.INFO)
+        logging.getLogger("pixoo_spotify").setLevel(logging.DEBUG)
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+        logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 def resolve_config(config_path: Path | None, overrides: dict) -> AppConfig:
@@ -254,6 +268,54 @@ def auth(
     typer.echo(f"Authentication succeeded. Token saved to: {token_path}")
 
 
+@app.command("font-install")
+def font_install(
+    lang: str | None = typer.Option(
+        None, "--lang", help="Language code (e.g. ja, en, zh-cn) or fallback"
+    ),
+    font_path: Path | None = typer.Option(None, "--font-path", help="Path to a .ttf/.otf font"),
+) -> None:
+    config_path = resolve_pixoo_spotify_config_path(PIXOO_SPOTIFY_CONFIG_PATH)
+    fonts_dir = get_fonts_dir(config_path)
+
+    if lang or font_path:
+        if not lang or not font_path:
+            typer.echo("Both --lang and --font-path are required for manual install.", err=True)
+            raise typer.Exit(code=1)
+        if not validate_lang_code(lang):
+            typer.echo(f"Unsupported language code: {lang}", err=True)
+            raise typer.Exit(code=1)
+        try:
+            dest = install_font_for_lang(fonts_dir, lang, font_path)
+        except FontInstallError as exc:
+            typer.echo(str(exc), err=True)
+            raise typer.Exit(code=1) from exc
+        typer.echo(f"Installed font for {lang}: {dest}")
+        return
+
+    typer.echo(
+        "This will download the recommended Fusion Pixel Font (OFL-1.1).\n"
+        f"Please review the license at {FUSION_PIXEL_FONT_LICENSE_URL}\n"
+        f"Repository: {FUSION_PIXEL_FONT_REPO}\n"
+        "Do you accept the license and want to install? (y/N): ",
+        nl=False,
+    )
+    answer = input().strip().lower()
+    if answer not in ("y", "yes"):
+        typer.echo("Canceled.")
+        raise typer.Exit(code=1)
+
+    try:
+        installed, asset_name, tag = asyncio.run(install_recommended_fonts(fonts_dir))
+    except FontInstallError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    tag_display = f" ({tag})" if tag else ""
+    typer.echo(f"Downloaded {asset_name}{tag_display}")
+    for lang_code, path in sorted(installed.items()):
+        typer.echo(f"- {lang_code}: {path}")
+
+
 @app.command()
 def devices() -> None:
     async def _discover() -> None:
@@ -310,7 +372,8 @@ def demo(
                 }
             )
         track = dummy_track()
-        fonts = await load_font_registry(default_font_config(), Path("fonts"))
+        fonts_dir = Path(config.spotify.cache_path).parent / "fonts"
+        fonts = await load_font_registry(fonts_dir)
         gif_bytes = build_gif_bytes(
             track=track,
             config=config.gif,

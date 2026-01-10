@@ -1,96 +1,144 @@
 from __future__ import annotations
 
 import io
+import logging
 from collections.abc import Iterable
+from importlib import resources
 from pathlib import Path
 
 import httpx
 from langdetect import DetectorFactory, detect_langs
 from PIL import Image, ImageDraw, ImageFont
-from pydantic import BaseModel, Field
 
 from pixoo_spotify.config import DitherMode, GifConfig, PaletteMode, ScrollMode, TextPosition
-from pixoo_spotify.fonts import MISAKI_GOTHIC_URL, ensure_font_file
+from pixoo_spotify.langs import get_langdetect_languages
 from pixoo_spotify.models import TrackInfo
 
 DetectorFactory.seed = 0
-
-
-class FontSpec(BaseModel):
-    name: str
-    path: Path | None = None
-    size: int = 8
-    download_url: str | None = None
-
-
-class FontConfig(BaseModel):
-    fonts: dict[str, FontSpec]
-    fallback_langs: list[str] = Field(default_factory=lambda: ["en", "ja"])
+logger = logging.getLogger(__name__)
+FONT_EXTENSIONS = (".ttf", ".otf")
 
 
 FontType = ImageFont.ImageFont | ImageFont.FreeTypeFont
 
 
 class FontRegistry:
-    def __init__(self, fonts: dict[str, FontType], fallback_langs: list[str]):
+    def __init__(
+        self,
+        fonts: dict[str, FontType],
+        font_paths: dict[str, Path],
+        fallback_font: FontType,
+        fallback_path: Path,
+        supported_langs: list[str],
+    ):
         self._fonts = fonts
-        self._fallbacks = fallback_langs
+        self._font_paths = font_paths
+        self._fallback_font = fallback_font
+        self._fallback_path = fallback_path
+        self._supported_langs = supported_langs
 
     def font_for_text(self, text: str) -> FontType:
-        lang = detect_language(text, self._fallbacks)
-        return self._fonts.get(lang) or next(iter(self._fonts.values()))
+        lang = detect_language(text, self._supported_langs)
+        if lang and lang in self._fonts:
+            logger.debug(
+                "Font selected lang=%s font=%s text=%s",
+                lang,
+                self._font_paths[lang],
+                _preview_text(text),
+            )
+            return self._fonts[lang]
+        logger.debug(
+            "Font fallback lang=%s font=%s text=%s",
+            lang,
+            self._fallback_path,
+            _preview_text(text),
+        )
+        return self._fallback_font
 
 
-async def load_font_registry(config: FontConfig, fonts_dir: Path) -> FontRegistry:
+async def load_font_registry(fonts_dir: Path) -> FontRegistry:
     fonts: dict[str, FontType] = {}
-    for lang, spec in config.fonts.items():
-        if spec.path:
-            path = spec.path
-            if not path.is_absolute():
-                path = fonts_dir / path
-            if spec.download_url:
-                path = await ensure_font_file(path, spec.download_url)
-            elif not path.exists():
-                path.parent.mkdir(parents=True, exist_ok=True)
-            if path.exists():
-                fonts[lang] = ImageFont.truetype(str(path), spec.size)
-                continue
-        fonts[lang] = ImageFont.load_default()
-    return FontRegistry(fonts=fonts, fallback_langs=config.fallback_langs)
+    font_paths: dict[str, Path] = {}
+    supported_langs = get_langdetect_languages()
 
+    if fonts_dir.exists():
+        logger.debug("Searching fonts in %s", fonts_dir)
+    else:
+        logger.debug("Fonts directory does not exist: %s", fonts_dir)
 
-def default_font_config() -> FontConfig:
-    return FontConfig(
-        fonts={
-            "en": FontSpec(
-                name="misaki_gothic",
-                path=Path("misaki_gothic.ttf"),
-                size=8,
-                download_url=MISAKI_GOTHIC_URL,
-            ),
-            "ja": FontSpec(
-                name="misaki_gothic",
-                path=Path("misaki_gothic.ttf"),
-                size=8,
-                download_url=MISAKI_GOTHIC_URL,
-            ),
-        },
-        fallback_langs=["en", "ja"],
+    for lang in supported_langs:
+        path = _find_font_path(fonts_dir, lang)
+        if not path:
+            continue
+        fonts[lang] = _load_font(path)
+        font_paths[lang] = path
+        logger.debug("Loaded font for lang=%s path=%s", lang, path)
+
+    fallback_path = _find_font_path(fonts_dir, "fallback")
+    if fallback_path is None:
+        fallback_path = _packaged_fallback_font()
+        logger.debug("Using packaged fallback font: %s", fallback_path)
+    else:
+        logger.debug("Using fallback font from config dir: %s", fallback_path)
+    fallback_font = _load_font(fallback_path)
+
+    return FontRegistry(
+        fonts=fonts,
+        font_paths=font_paths,
+        fallback_font=fallback_font,
+        fallback_path=fallback_path,
+        supported_langs=supported_langs,
     )
 
 
-def detect_language(text: str, fallbacks: Iterable[str]) -> str:
+def detect_language(text: str, fallbacks: Iterable[str]) -> str | None:
     text = text.strip()
     if not text:
-        return next(iter(fallbacks))
+        return None
     try:
         guesses = detect_langs(text)
-    except Exception:
-        return next(iter(fallbacks))
+    except Exception as exc:
+        logger.debug("Language detection failed: %s", exc)
+        return None
     if not guesses:
-        return next(iter(fallbacks))
+        return None
     guess = max(guesses, key=lambda item: item.prob)
+    supported = set(fallbacks)
+    if guess.lang not in supported:
+        logger.debug("Detected language not supported: %s", guess.lang)
+        return None
+    logger.debug("Detected language=%s prob=%.3f", guess.lang, guess.prob)
     return guess.lang
+
+
+def _preview_text(text: str, limit: int = 32) -> str:
+    text = text.replace("\n", " ")
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1] + "…"
+
+
+def _find_font_path(fonts_dir: Path, name: str) -> Path | None:
+    for ext in FONT_EXTENSIONS:
+        candidate = fonts_dir / f"{name}{ext}"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _load_font(path: Path) -> FontType:
+    try:
+        return ImageFont.truetype(str(path), 8)
+    except OSError as exc:
+        raise RuntimeError(f"Failed to load font at {path}: {exc}") from exc
+
+
+def _packaged_fallback_font() -> Path:
+    resource = resources.files("pixoo_spotify") / "fonts/misaki/misaki_gothic.ttf"
+    path = Path(str(resource))
+    if not path.exists():
+        raise RuntimeError("Packaged fallback font is missing.")
+    return path
 
 
 async def fetch_artwork(url: str | None, size: int) -> Image.Image | None:

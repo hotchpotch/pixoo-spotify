@@ -9,32 +9,14 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import spotipy
-from platformdirs import user_config_dir
 from pydantic import ValidationError
 from spotipy.exceptions import SpotifyException, SpotifyOauthError, SpotifyStateError
 from spotipy.oauth2 import start_local_http_server
 
 from pixoo_spotify.config import SpotifyConfig
 from pixoo_spotify.models import TrackInfo
+from pixoo_spotify.paths import get_auth_paths
 
-PIXOO_SPOTIFY_CONFIG_APP_NAME = "pixoo-spotify"
-AUTH_CLIENT_FILE_NAME = "auth_spotify_client.json"
-SPOTIFY_TOKEN_FILE_NAME = "spotify_token.json"
-
-
-def resolve_pixoo_spotify_config_path(path: Path | None = None) -> Path:
-    if path is not None:
-        return path
-    return Path(user_config_dir(PIXOO_SPOTIFY_CONFIG_APP_NAME))
-
-
-def get_auth_paths(config_path: Path | None = None) -> tuple[Path, Path]:
-    base_path = resolve_pixoo_spotify_config_path(config_path)
-    return (base_path / AUTH_CLIENT_FILE_NAME, base_path / SPOTIFY_TOKEN_FILE_NAME)
-
-
-def resolve_spotify_token_path(config_path: Path | None = None) -> Path:
-    return get_auth_paths(config_path)[1]
 
 class SpotifyClient:
     def __init__(self, config: SpotifyConfig):

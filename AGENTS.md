@@ -11,7 +11,9 @@
 - `auth` requires `--client-id`; the value is cached under the platform config directory.
 - Config directory can be overridden with `--config-path` (global option).
 - For headless auth, set `--no-open-browser` and copy/paste the redirect URL.
-- Fonts live under `./fonts/` and are gitignored; auto-download if missing.
+- Fonts live under the config directory (same location as auth files) in `fonts/`.
+- Use `pixoo-spotify font-install` to install the recommended Fusion Pixel Font.
+- If no fonts are installed, the packaged Misaki Gothic fallback is used.
 - Keep GIF output under `output/` and cache under `.cache/` (both gitignored).
 
 ## Testing & linting

@@ -8,12 +8,7 @@ import uvicorn
 from spotipy.exceptions import SpotifyException
 
 from pixoo_spotify.config import AppConfig
-from pixoo_spotify.gif import (
-    build_gif_bytes,
-    default_font_config,
-    fetch_artwork,
-    load_font_registry,
-)
+from pixoo_spotify.gif import build_gif_bytes, fetch_artwork, load_font_registry
 from pixoo_spotify.models import TrackInfo
 from pixoo_spotify.pixoo import discover_devices, play_gif
 from pixoo_spotify.server import create_app
@@ -26,8 +21,8 @@ async def run_app(config: AppConfig) -> None:
     gif_path = config.gif.output_path
     gif_path.parent.mkdir(parents=True, exist_ok=True)
 
-    fonts_dir = Path("fonts")
-    font_registry = await load_font_registry(default_font_config(), fonts_dir)
+    fonts_dir = Path(config.spotify.cache_path).parent / "fonts"
+    font_registry = await load_font_registry(fonts_dir)
 
     app = create_app(gif_path)
     server_config = uvicorn.Config(
@@ -96,8 +91,8 @@ async def run_app(config: AppConfig) -> None:
 async def generate_gif_once(config: AppConfig, track: TrackInfo) -> Path:
     gif_path = config.gif.output_path
     gif_path.parent.mkdir(parents=True, exist_ok=True)
-    fonts_dir = Path("fonts")
-    font_registry = await load_font_registry(default_font_config(), fonts_dir)
+    fonts_dir = Path(config.spotify.cache_path).parent / "fonts"
+    font_registry = await load_font_registry(fonts_dir)
     artwork = await fetch_artwork(
         str(track.artwork_url) if track.artwork_url else None,
         config.gif.image_size or config.gif.size,

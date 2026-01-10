@@ -4,8 +4,6 @@ from pathlib import Path
 from PIL import Image
 from pixoo_spotify.config import GifConfig, ScrollMode
 from pixoo_spotify.gif import (
-    FontConfig,
-    FontSpec,
     build_gif_bytes,
     compute_scroll_offset,
     load_font_registry,
@@ -17,9 +15,7 @@ from pixoo_spotify.models import TrackInfo
 def test_gif_generation(tmp_path: Path) -> None:
     track = TrackInfo(artist="Artist", title="Title", album="Album")
     config = GifConfig(output_path=tmp_path / "out.gif")
-    font_config = FontConfig(fonts={"en": FontSpec(name="default")}, fallback_langs=["en"])
-
-    fonts = asyncio.run(load_font_registry(font_config, tmp_path))
+    fonts = asyncio.run(load_font_registry(tmp_path / "fonts"))
     gif_bytes = build_gif_bytes(track=track, config=config, fonts=fonts, artwork=None)
 
     output = tmp_path / "out.gif"
@@ -111,8 +107,7 @@ def test_text_color_parsing() -> None:
 def test_artwork_only_generates_single_frame(tmp_path: Path) -> None:
     track = TrackInfo(artist="Artist", title="Title", album="Album")
     config = GifConfig(output_path=tmp_path / "out.gif", artwork_only=True)
-    font_config = FontConfig(fonts={"en": FontSpec(name="default")}, fallback_langs=["en"])
-    fonts = asyncio.run(load_font_registry(font_config, tmp_path))
+    fonts = asyncio.run(load_font_registry(tmp_path / "fonts"))
     gif_bytes = build_gif_bytes(track=track, config=config, fonts=fonts, artwork=None)
     output = tmp_path / "out.gif"
     output.write_bytes(gif_bytes)

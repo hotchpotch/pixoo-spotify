@@ -6,12 +6,12 @@
 - GIF は以下の要件：
   - アートワークを 64x64 の背景に使用（なければ灰色背景）
   - `{artist}\n{title}` を行ごとにスクロール表示
-  - ビットマップフォント使用（Misaki Gothic, size 8）
+- ビットマップフォント使用（8px 固定。デフォルトは Misaki Gothic）
   - 文字列は max 40 文字
   - 右下寄せを標準とし、位置選択可能
   - fps は 8
-- Misaki Gothic フォントを raw でダウンロードし `./fonts/` に保存（gitignore 対象）
-- 行ごとに言語判定（langdetect）しフォントを割り当てる（当面は en/ja ともに Misaki）
+- フォントは config ディレクトリ配下 `fonts/` に保存
+- 行ごとに言語判定（langdetect）し、対応する言語コードのフォントがあれば使用（なければ fallback）
 - HTTP サーバは FastAPI + Uvicorn（async）
 - CLI は Typer、型は Pydantic / type hint を徹底
 - Pixoo デバイス検出は `https://app.divoom-gz.com/Device/ReturnSameLANDevice`
@@ -26,7 +26,7 @@
 - `pixoo_spotify/gif.py`
   - GIF 生成ロジック（アートワーク + 行単位スクロール）
 - `pixoo_spotify/fonts.py`
-  - Misaki Gothic の自動ダウンロード
+  - フォントのインストール（Fusion Pixel Font / 手動指定）
 - `pixoo_spotify/spotify.py`
   - Spotipy OAuth + 現在再生中トラック取得
 - `pixoo_spotify/pixoo.py`
@@ -63,6 +63,7 @@
 - 認証: `uv run pixoo-spotify auth`
 - 実行: `uv run pixoo-spotify run --public-base-url http://<host>:8000 --device-ip <pixoo-ip>`
 - ダミーGIF作成: `uv run pixoo-spotify demo`
+- フォント導入: `uv run pixoo-spotify font-install`
 
 ## 3. 未確認事項 / 要検証
 - Spotify OAuth のヘッドレス環境対応（`open_browser=True`）は環境によって失敗の可能性あり。
@@ -71,7 +72,7 @@
 - Pixoo が GIF のスクロール表現を意図通り表示できるか未検証。
 - Pixoo からの画像取得サイズが 64px のみか、32/16 も取得可能か要確認。
 - `public_base_url` を指定しない場合の URL が Pixoo 側から到達できるかはネットワーク依存。
-- `fonts/` の自動ダウンロードがネットワーク制限下で失敗した場合の挙動。
+- `font-install` 実行時のネットワーク失敗時の挙動。
 - 文字列の長さ制限（max 40）での表示崩れ確認が必要。
 
 ## 4. 次の開発者への申し送り事項
@@ -79,6 +80,6 @@
 - Spotify 認証は手動入力フローなので、運用を考えるなら OAuth リダイレクト受け側の実装が必要です。
 - `config.toml` のサンプルがまだ無いので、運用向けにテンプレ追加が望ましいです。
 - GIF のスクロール速度・余白・位置は `GifConfig` で調整可能です。
-- 文字の言語判定は行単位で行い、フォントは en/ja ともに Misaki Gothic に固定しています。
+- 文字の言語判定は行単位で行い、`<lang>.ttf` があれば使用、なければ `fallback.ttf` を使用。
 - 64/32/16 サイズは `GifConfig.size` で変更できますが、文字表示の見え方確認が必要です。
 - テストは軽量なので、Pixoo 実機テストを自動化する場合は統合テストを追加してください。
