@@ -45,6 +45,10 @@ uvx pixoo-spotify run
 
 If you run with no options, the app will try to infer the Spotify language from your environment and discover the Pixoo device on your local network. You can also provide all values manually.
 
+## Troubleshooting
+
+When the Pixoo device accesses the server, it needs permission to reach port 18080 on the machine running pixoo_spotify. If the OS firewall blocks this port, allow or open it.
+
 ## License
 
 - Source code: MIT
