@@ -40,7 +40,7 @@ jobs:
         run: uv python install 3.10
 
       - name: Sync dependencies
-        run: uv sync --locked --no-default-groups --group dev
+        run: uv sync --locked --extra dev
 
       - name: Run tox
         run: ./.venv/bin/tox run-parallel
