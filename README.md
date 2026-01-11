@@ -1,7 +1,7 @@
-# pixoo_spotify ✨
+# pixoo_spotify
 
-pixoo_spotify shows the currently playing Spotify artwork and track info on a [Divoom Pixoo64](https://divoom.com/en-jp/products/pixoo-64) 64x64 Pixel Art LED Display 🎵🟦
-Because the artwork is rendered at 64x64, it keeps the pixel art vibe crisp and charming 🎨
+pixoo_spotify shows the currently playing Spotify artwork and track info on a [Divoom Pixoo64](https://divoom.com/en-jp/products/pixoo-64) 64x64 Pixel Art LED Display.
+Because the artwork is rendered at 64x64, it keeps the pixel art vibe crisp and charming.
 
 <div style="display:inline-block; background:#0b0b0b; border:3px solid #000; padding:6px;">
   <div style="background:#1a1a1a; padding:3px;">
@@ -9,14 +9,14 @@ Because the artwork is rendered at 64x64, it keeps the pixel art vibe crisp and 
   </div>
 </div>
 
-Divoom’s official app supports Spotify playback, but it does not show the artwork, so this project fills that gap 🚀
+Divoom’s official app supports Spotify playback, but it does not show the artwork, so this project fills that gap.
 
-## Install 🧰
+## Install
 
 Install uv first. This gives you the uvx command.
 https://docs.astral.sh/uv/getting-started/installation/
 
-## Spotify setup (client ID) 🔐
+## Spotify setup (client ID)
 
 - Register at https://developer.spotify.com/
 - Create an app at https://developer.spotify.com/dashboard
@@ -29,9 +29,9 @@ Then authenticate once with your Client ID:
 uvx pixoo-spotify auth --client-id "CLIENT ID"
 ```
 
-## Fonts (optional) 🔤
+## Fonts (optional)
 
-By default, a bundled 8‑pixel font that supports English and Japanese [Misaki font](https://littlelimit.net/misaki.htm) is used 🧩
+By default, a bundled 8‑pixel font that supports English and Japanese [Misaki font](https://littlelimit.net/misaki.htm) is used.
 
 If you want Latin/CJK/Korean coverage, install additional fonts:
 
@@ -42,7 +42,7 @@ uv run pixoo-spotify font-install
 This downloads pixel fonts from:
 https://github.com/TakWolf/fusion-pixel-font
 
-## Run ▶️
+## Run
 
 ```
 uvx pixoo-spotify run
@@ -56,14 +56,14 @@ uvx pixoo-spotify run --help
 
 If you run with no options, the app will try to infer the Spotify language from your environment and discover the Pixoo device on your local network. You can also provide all values manually.
 
-## Troubleshooting 🧯
+## Troubleshooting
 
 When the Pixoo device accesses the server, it needs permission to reach port 18080 on the machine running pixoo_spotify. If the OS firewall blocks this port, allow or open it.
 
-## License 📄
+## License
 
 - Source code: MIT
 
-## Author 🙌
+## Author
 
 - Yuichi Tateno (@hotchpotch)

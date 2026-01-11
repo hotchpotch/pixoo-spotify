@@ -9,6 +9,7 @@
 - Add a 16px blank gap after scrolling text completes before restarting the line from offscreen.
 - Refresh README with an example GIF, framed styling, links, and run help usage.
 - Translate docs/spec.md to English.
+- Add a release-time check to ensure `uv.lock` is up to date.
 
 ## 0.0.3
 

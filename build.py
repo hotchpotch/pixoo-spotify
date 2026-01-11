@@ -80,8 +80,24 @@ def ensure_clean_worktree(ignore_warnings: bool) -> None:
         raise RuntimeError(message)
 
 
+def ensure_lock_up_to_date() -> None:
+    result = subprocess.run(
+        ["uv", "lock", "--check"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    if result.returncode != 0:
+        output = result.stdout.strip()
+        message = "uv.lock is out of date. Run `uv lock` and commit uv.lock before releasing."
+        if output:
+            message = f"{message}\n\n{output}"
+        raise RuntimeError(message)
+
+
 def release(pyproject_path: Path, log_path: Path, ignore_git_warnings: bool) -> None:
     ensure_clean_worktree(ignore_git_warnings)
+    ensure_lock_up_to_date()
     version = read_project_version(pyproject_path)
     if not release_log_has_entry(log_path, version):
         raise RuntimeError(

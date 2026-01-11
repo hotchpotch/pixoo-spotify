@@ -18,25 +18,26 @@ export PYPI_TOKEN="pypi-..."
 2) When preparing a release, move the `HEAD` notes into a versioned section.
 3) Update the version in `pyproject.toml` (PyPI rejects reusing the same versioned files).
 4) Add an entry for the version in `release-log.md`.
-5) Run tests and type checks:
+5) Ensure `uv.lock` is up to date (the release script runs `uv lock --check`).
+6) Run tests and type checks:
 
 ```
 uv run --extra dev tox
 ```
 
-6) Build distribution artifacts:
+7) Build distribution artifacts:
 
 ```
 uv build
 ```
 
-7) Publish to PyPI:
+8) Publish to PyPI:
 
 ```
 uv publish --token "$PYPI_TOKEN"
 ```
 
-8) Tag the release in git:
+9) Tag the release in git:
 
 ```
 git tag -a vX.Y.Z -m "Release vX.Y.Z"
