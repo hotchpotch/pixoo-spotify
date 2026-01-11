@@ -42,5 +42,11 @@ jobs:
       - name: Sync dependencies
         run: uv sync --locked --extra dev
 
+      - name: Ensure uv available for tox-uv
+        run: |
+          UV_BIN="$(command -v uv)"
+          echo "uv: ${UV_BIN}"
+          ln -sf "${UV_BIN}" .venv/bin/uv
+
       - name: Run tox
         run: ./.venv/bin/tox run-parallel
