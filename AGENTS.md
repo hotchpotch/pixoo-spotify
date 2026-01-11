@@ -4,6 +4,7 @@
 ## Project conventions
 - Use `uv add` for all dependencies. Keep runtime deps in `[project.dependencies]`.
 - Dev tools must live in the `dev` extra. Update via `uv add --optional dev <pkgs>` (tox runs with `uv run --extra dev tox`).
+- If `uv.lock` changes, include it in the same commit.
 - Prefer async/await for IO. Keep Pydantic models for config and data payloads.
 - CLI uses Typer. Non-background mode should show a small Rich UI panel (see `pixoo_spotify/ui.py`).
 - HTTP server uses `http.server` (ThreadingHTTPServer) to keep it lightweight.
@@ -20,7 +21,7 @@
 - Releases should go through `python ./build.py --release`, which fails if the git worktree is dirty or the release log is missing.
 
 ## Testing & linting
-- Run: `uv run --extra dev tox`
+- Run: `uv run --extra dev tox` after implementation changes and before release.
 - Tox runs pytest, ruff, and ty.
 
 ## Skills
