@@ -1,6 +1,6 @@
 [project]
 name = "pixoo-spotify"
-version = "0.0.2"
+version = "0.0.3"
 description = "Show the currently playing Spotify artwork and track info on a Divoom Pixoo64 pixel display."
 license = { text = "MIT" }
 readme = "README.md"

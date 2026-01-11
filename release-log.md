@@ -2,7 +2,12 @@
 
 ## HEAD
 
+- (unreleased)
+
+## 0.0.3
+
 - Add CLI version flag.
+- Add release helper script and release log checks.
 
 ## 0.0.2
 
