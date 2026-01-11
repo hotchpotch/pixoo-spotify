@@ -212,3 +212,4 @@ fonts/
 !pixoo_spotify/fonts/**
 output/
 .cache/
+tmp/

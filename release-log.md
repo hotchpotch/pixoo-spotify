@@ -2,7 +2,13 @@
 
 ## HEAD
 
-- Add a 64px blank gap after scrolling text completes before restarting the line from offscreen.
+- (unreleased)
+
+## 0.0.4
+
+- Add a 16px blank gap after scrolling text completes before restarting the line from offscreen.
+- Refresh README with an example GIF, framed styling, links, and run help usage.
+- Translate docs/spec.md to English.
 
 ## 0.0.3
 

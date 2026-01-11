@@ -17,7 +17,7 @@ from pixoo_spotify.models import TrackInfo
 DetectorFactory.seed = 0
 logger = logging.getLogger(__name__)
 FONT_EXTENSIONS = (".ttf", ".otf")
-SCROLL_END_MARGIN_PX = 64
+SCROLL_END_MARGIN_PX = 16
 
 
 FontType = ImageFont.ImageFont | ImageFont.FreeTypeFont
