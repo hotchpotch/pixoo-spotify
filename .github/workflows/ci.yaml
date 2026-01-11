@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            cache_suffix: linux-py310
+            experimental: false
+          - runner: ubuntu-24.04-arm64
+            cache_suffix: linux-arm64-py310
+            experimental: true
+    runs-on: ${{ matrix.runner }}
+    env:
+      UV_PYTHON: "3.10"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        id: setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-suffix: ${{ matrix.cache_suffix }}
+
+      - name: Install Python 3.10
+        run: uv python install 3.10
+
+      - name: Sync dependencies
+        run: uv sync --locked --no-default-groups --group dev
+
+      - name: Run tox
+        run: ./.venv/bin/tox run-parallel
