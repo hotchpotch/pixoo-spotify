@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -51,6 +52,16 @@ def run(cmd: list[str]) -> None:
     subprocess.run(cmd, check=True)
 
 
+def clean_dist(dist_path: Path) -> None:
+    if dist_path.exists():
+        shutil.rmtree(dist_path)
+
+
+def build_publish_files(dist_path: Path, version: str) -> list[Path]:
+    pattern = f"pixoo_spotify-{version}*"
+    return sorted(dist_path.glob(pattern))
+
+
 def ensure_clean_worktree(ignore_warnings: bool) -> None:
     result = subprocess.run(
         ["git", "status", "--porcelain"],
@@ -80,8 +91,13 @@ def release(pyproject_path: Path, log_path: Path, ignore_git_warnings: bool) -> 
     if not token:
         raise RuntimeError("PYPI_TOKEN is not set.")
     run(["uv", "run", "--extra", "dev", "tox"])
+    dist_path = Path("dist")
+    clean_dist(dist_path)
     run(["uv", "build"])
-    run(["uv", "publish", "--token", token])
+    publish_files = build_publish_files(dist_path, version)
+    if not publish_files:
+        raise RuntimeError(f"No artifacts found for version {version} in {dist_path}.")
+    run(["uv", "publish", "--token", token, *[str(p) for p in publish_files]])
     tag = f"v{version}"
     run(["git", "tag", "-f", "-a", tag, "-m", f"Release {tag}"])
     run(["git", "push", "-f", "origin", tag])
