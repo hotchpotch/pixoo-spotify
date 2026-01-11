@@ -208,5 +208,7 @@ __marimo__/
 
 # Project artifacts
 fonts/
+!pixoo_spotify/fonts/
+!pixoo_spotify/fonts/**
 output/
 .cache/
