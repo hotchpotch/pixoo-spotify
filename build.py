@@ -4,11 +4,11 @@ import argparse
 import os
 import re
 import subprocess
-import sys
 from pathlib import Path
+from typing import Any
 
 
-def _load_toml() -> object:
+def _load_toml() -> Any:
     try:
         import tomllib  # type: ignore[attr-defined]
 
@@ -51,7 +51,26 @@ def run(cmd: list[str]) -> None:
     subprocess.run(cmd, check=True)
 
 
-def release(pyproject_path: Path, log_path: Path) -> None:
+def ensure_clean_worktree(ignore_warnings: bool) -> None:
+    result = subprocess.run(
+        ["git", "status", "--porcelain"],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    changes = result.stdout.strip()
+    if changes and not ignore_warnings:
+        message = (
+            "Uncommitted changes detected. Commit or stash them before releasing, "
+            "or rerun with --ignore-git-warnings.\n\n"
+            f"{changes}"
+        )
+        raise RuntimeError(message)
+
+
+def release(pyproject_path: Path, log_path: Path, ignore_git_warnings: bool) -> None:
+    ensure_clean_worktree(ignore_git_warnings)
     version = read_project_version(pyproject_path)
     if not release_log_has_entry(log_path, version):
         raise RuntimeError(
@@ -75,9 +94,14 @@ def main() -> int:
         action="store_true",
         help="Run tests, build, publish, and tag the current version.",
     )
+    parser.add_argument(
+        "--ignore-git-warnings",
+        action="store_true",
+        help="Allow releasing with uncommitted git changes.",
+    )
     args = parser.parse_args()
     if args.release:
-        release(Path("pyproject.toml"), Path("release-log.md"))
+        release(Path("pyproject.toml"), Path("release-log.md"), args.ignore_git_warnings)
         return 0
     parser.print_help()
     return 1
