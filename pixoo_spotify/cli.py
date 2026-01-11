@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from importlib import metadata
 from pathlib import Path
 
 import typer
@@ -48,7 +49,15 @@ app = typer.Typer(
     add_completion=False,
     pretty_exceptions_enable=False,
     pretty_exceptions_show_locals=False,
+    invoke_without_command=True,
 )
+
+
+def get_version() -> str:
+    try:
+        return metadata.version("pixoo-spotify")
+    except metadata.PackageNotFoundError:
+        return "unknown"
 
 
 @app.callback()
@@ -57,8 +66,14 @@ def global_options(
     verbose: bool = typer.Option(
         False, "--verbose", help="Enable debug logging", show_default=True
     ),
+    version: bool = typer.Option(
+        False, "--version", help="Show version and exit.", is_eager=True
+    ),
 ) -> None:
     global PIXOO_SPOTIFY_CONFIG_PATH, PIXOO_SPOTIFY_VERBOSE
+    if version:
+        typer.echo(get_version())
+        raise typer.Exit()
     PIXOO_SPOTIFY_CONFIG_PATH = config_path
     PIXOO_SPOTIFY_VERBOSE = verbose
 
