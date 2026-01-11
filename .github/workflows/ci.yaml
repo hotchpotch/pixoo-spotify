@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
     strategy:
@@ -18,10 +22,6 @@ jobs:
         include:
           - runner: ubuntu-latest
             cache_suffix: linux-py310
-            experimental: false
-          - runner: ubuntu-24.04-arm64
-            cache_suffix: linux-arm64-py310
-            experimental: true
     runs-on: ${{ matrix.runner }}
     env:
       UV_PYTHON: "3.10"
