@@ -2,7 +2,7 @@
 
 ## HEAD
 
-- (unreleased)
+- Add a 64px blank gap after scrolling text completes before restarting the line from offscreen.
 
 ## 0.0.3
 

@@ -113,7 +113,7 @@ def test_compute_scroll_offset_loop_with_pause() -> None:
         )
         for idx in range(5)
     ]
-    assert offsets == [0, -1, -2, -3, -4]
+    assert offsets == [8, 7, 6, 5, 4]
 
 
 def test_position_origin_respects_corners() -> None:
@@ -127,7 +127,7 @@ def test_position_origin_respects_corners() -> None:
     assert position_origin_y(TextPosition.bottom_right, 64, 12, 3) == 49
 
 
-def test_left_align_starts_at_margin() -> None:
+def test_left_align_starts_offscreen() -> None:
     size = 64
     margin = 2
     text_width = 100
@@ -145,7 +145,7 @@ def test_left_align_starts_at_margin() -> None:
         scroll_pause_frames=0,
         direction=-1,
     )
-    assert origin_x + loop_offset == margin_left
+    assert origin_x + loop_offset == margin_left + available_width
     bounce_offset = compute_scroll_offset(
         frame_index=0,
         cycle=4,

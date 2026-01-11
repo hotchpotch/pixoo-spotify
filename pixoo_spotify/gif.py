@@ -17,6 +17,7 @@ from pixoo_spotify.models import TrackInfo
 DetectorFactory.seed = 0
 logger = logging.getLogger(__name__)
 FONT_EXTENSIONS = (".ttf", ".otf")
+SCROLL_END_MARGIN_PX = 64
 
 
 FontType = ImageFont.ImageFont | ImageFont.FreeTypeFont
@@ -235,7 +236,7 @@ def build_frames(
             shared_range = max(0, shared_width - available_width)
             shared_cycle = max(1, shared_range * 2 + config.scroll_pause_frames * 2)
         else:
-            shared_cycle = shared_width + config.spacer_px
+            shared_cycle = shared_width + available_width + config.spacer_px + SCROLL_END_MARGIN_PX
 
     cycles = []
     for (_, width, _, _), overflow in zip(line_metrics, overflow_flags, strict=False):
@@ -244,7 +245,7 @@ def build_frames(
                 scroll_range = max(0, width - available_width)
                 cycles.append(max(1, scroll_range * 2 + config.scroll_pause_frames * 2))
             else:
-                cycles.append(width + config.spacer_px)
+                cycles.append(width + available_width + config.spacer_px + SCROLL_END_MARGIN_PX)
         else:
             cycles.append(1)
 
@@ -326,7 +327,7 @@ def build_frames(
                 y,
                 cycle,
                 size,
-                wrap=config.scroll_mode == ScrollMode.loop,
+                wrap=False,
                 text_color=text_rgba,
                 shadow_color=shadow_rgba,
             )
@@ -487,7 +488,8 @@ def compute_scroll_offset(
         if direction >= 0:
             return int(scroll_range - pos)
         return -int(pos)
-    return -int(step % cycle)
+    lead_in = text_width if direction >= 0 else available_width
+    return int(lead_in - (step % cycle))
 
 
 def prepare_background(
