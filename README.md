@@ -1,6 +1,6 @@
 # pixoo_spotify
 
-pixoo_spotify shows the currently playing Spotify artwork and track info on a Divoom Pixoo64 64x64 Pixel Art LED Display.
+pixoo_spotify shows the currently playing Spotify artwork and track info on a [Divoom Pixoo64](https://divoom.com/en-jp/products/pixoo-64) 64x64 Pixel Art LED Display.
 Because the artwork is rendered at 64x64, it preserves the pixel art feel nicely.
 
 <div style="display:inline-block; background:#0b0b0b; border:3px solid #000; padding:6px;">
@@ -31,8 +31,7 @@ uvx pixoo-spotify auth --client-id "CLIENT ID"
 
 ## Fonts (optional)
 
-By default, a bundled 8‑pixel font that supports English and Japanese (Misaki) is used:
-https://littlelimit.net/misaki.htm
+By default, a bundled 8‑pixel font that supports English and Japanese [Misaki font](https://littlelimit.net/misaki.htm) is used.
 
 If you want Latin/CJK/Korean coverage, install additional fonts:
 
