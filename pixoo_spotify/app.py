@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 
 import httpx
+from requests.exceptions import RequestException
 from spotipy.exceptions import SpotifyException
 
 from pixoo_spotify.config import AppConfig, UiMode
@@ -78,6 +79,11 @@ async def run_app(config: AppConfig, *, verbose: bool = False) -> None:
                             await asyncio.sleep(retry_after)
                             continue
                         raise
+                    except RequestException as exc:
+                        logger.warning("Spotify request failed: %s", exc)
+                        logger.debug("Spotify request failed details.", exc_info=True)
+                        await asyncio.sleep(config.poll_interval)
+                        continue
                     if track and track.is_playing:
                         if config.pixoo.play_on_device and device_ip and config.pixoo.auto_screen_off:
                             if not last_playing or not screen_initialized:
