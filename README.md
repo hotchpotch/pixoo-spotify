@@ -2,7 +2,12 @@
 
 pixoo_spotify shows the currently playing Spotify artwork and track info on a Divoom Pixoo64 64x64 Pixel Art LED Display.
 Because the artwork is rendered at 64x64, it preserves the pixel art feel nicely.
-![pixoo_spotify example](assets/images/example.gif)
+
+<div style="display:inline-block; background:#0b0b0b; border:3px solid #000; padding:6px;">
+  <div style="background:#1a1a1a; padding:3px;">
+    <img src="assets/images/example.gif" alt="pixoo_spotify example" style="display:block; border:1px solid #000; image-rendering:pixelated;">
+  </div>
+</div>
 
 Divoom’s official app supports Spotify playback, but it does not show the artwork, so this project fills that gap.
 
