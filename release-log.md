@@ -1,5 +1,9 @@
 # Release Log
 
+## HEAD
+
+- Add CLI version flag.
+
 ## 0.0.2
 
 - Ensure the bundled fallback font is included in the package.

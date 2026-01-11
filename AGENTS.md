@@ -16,6 +16,8 @@
 - If no fonts are installed, the packaged Misaki Gothic fallback is used.
 - Default GIF output lives under the platform config directory (`output/latest.gif` under the same base as auth/cache). Demo/manual commands still use `output/`.
 - HTTP server serves `/spotify_gif` (Pixoo URL includes a cache-busting `?{epoch}`).
+- Keep `release-log.md` updated. Use the `HEAD` section for unreleased changes and add a versioned section before releasing.
+- Releases should go through `python ./build.py --release`, which fails if the git worktree is dirty or the release log is missing.
 
 ## Testing & linting
 - Run: `uv run --extra dev tox`

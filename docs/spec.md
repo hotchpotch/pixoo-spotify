@@ -41,6 +41,10 @@
   - ダミー用の Track + Artwork
 - `tests/`
   - GIF 生成・設定マージのテスト
+- `release-log.md`
+  - HEAD に未リリースの変更をまとめ、リリース時にバージョン節へ移動
+- `build.py`
+  - リリース用ヘルパー（テスト/ビルド/公開/タグ付け、未コミットやリリースログ不足で失敗）
 
 ### 依存関係
 - Runtime: `typer`, `pydantic`, `spotipy`, `httpx`, `pillow`, `langdetect`, `rich`
@@ -64,6 +68,7 @@
 - 実行: `uv run pixoo-spotify run --public-base-url http://<host>:8000 --device-ip <pixoo-ip>`
 - ダミーGIF作成: `uv run pixoo-spotify demo`
 - フォント導入: `uv run pixoo-spotify font-install`
+- バージョン表示: `uv run pixoo-spotify --version`
 
 ## 3. 未確認事項 / 要検証
 - Spotify OAuth のヘッドレス環境対応（`open_browser=True`）は環境によって失敗の可能性あり。
