@@ -48,6 +48,12 @@ https://github.com/TakWolf/fusion-pixel-font
 uvx pixoo-spotify run
 ```
 
+For detailed command-line options:
+
+```
+uvx pixoo-spotify run --help
+```
+
 If you run with no options, the app will try to infer the Spotify language from your environment and discover the Pixoo device on your local network. You can also provide all values manually.
 
 ## Troubleshooting 🧯

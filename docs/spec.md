@@ -1,90 +1,90 @@
-# pixoo-spotify 仕様メモ
+# pixoo-spotify Specification Notes
 
-## 1. 初期の仕様（要約）
-- Pixoo (64x64/32x32/16x16) に表示できる GIF を生成し、HTTP サーバで配信する CLI アプリ。
-- Spotify の「現在再生中」情報を取得し、アートワーク + テキスト（アーティスト/タイトル）を表示。
-- GIF は以下の要件：
-  - アートワークを 64x64 の背景に使用（なければ灰色背景）
-  - `{artist}\n{title}` を行ごとにスクロール表示
-- ビットマップフォント使用（8px 固定。デフォルトは Misaki Gothic）
-  - 文字列は max 40 文字
-- 左下寄せを標準とし、位置選択可能
-  - fps は 8
-- フォントは config ディレクトリ配下 `fonts/` に保存
-- 行ごとに言語判定（langdetect）し、対応する言語コードのフォントがあれば使用（なければ fallback）
-- HTTP サーバは軽量な `http.server` ベース
-- CLI は Typer、型は Pydantic / type hint を徹底
-- Pixoo デバイス検出は `https://app.divoom-gz.com/Device/ReturnSameLANDevice`
-- Pixoo への再生指示は `Device/PlayTFGif` を利用
+## 1. Initial spec (summary)
+- A CLI app that generates GIFs for Pixoo (64x64/32x32/16x16) and serves them via an HTTP server.
+- Fetches Spotify "now playing" info and renders artwork + text (artist/title).
+- GIF requirements:
+  - Use artwork as a 64x64 background (or gray when missing).
+  - Scroll `{artist}\n{title}` line by line.
+- Bitmap font (fixed 8px). Default is Misaki Gothic.
+  - Max 40 characters.
+- Bottom-left alignment by default, position selectable.
+  - FPS is 8.
+- Fonts are stored under the config directory `fonts/`.
+- Per-line language detection (langdetect). Use a font matching the language code if available, otherwise fallback.
+- HTTP server uses lightweight `http.server`.
+- CLI is Typer, types are enforced with Pydantic and type hints.
+- Pixoo device discovery endpoint: `https://app.divoom-gz.com/Device/ReturnSameLANDevice`
+- Pixoo playback command: `Device/PlayTFGif`
 
-## 2. 現在の実装（2026-01-09 時点）
-### 構成と主要モジュール
+## 2. Current implementation (as of 2026-01-09)
+### Structure and core modules
 - `pixoo_spotify/cli.py`
   - Typer CLI: `run` / `auth` / `devices` / `demo` / `gif`
 - `pixoo_spotify/app.py`
-  - Spotify → GIF 生成 → HTTP 配信 → Pixoo 再生のメインループ
+  - Main loop: Spotify -> GIF generation -> HTTP serving -> Pixoo playback
 - `pixoo_spotify/gif.py`
-  - GIF 生成ロジック（アートワーク + 行単位スクロール）
+  - GIF generation logic (artwork + per-line scrolling)
 - `pixoo_spotify/fonts.py`
-  - フォントのインストール（Fusion Pixel Font / 手動指定）
+  - Font installation (Fusion Pixel Font / manual)
 - `pixoo_spotify/spotify.py`
-  - Spotipy OAuth + 現在再生中トラック取得
+  - Spotipy OAuth + now playing track retrieval
 - `pixoo_spotify/pixoo.py`
-  - Pixoo デバイス発見 / PlayTFGif 呼び出し
+  - Pixoo device discovery / PlayTFGif calls
 - `pixoo_spotify/server.py`
-  - `http.server` で `/spotify_gif` を配信（Pixoo には `?{epoch}` を付けて送信）
+  - Serves `/spotify_gif` via `http.server` (Pixoo is sent with `?{epoch}`)
 - `pixoo_spotify/config.py`
-  - Pydantic 設定、config.toml/json 対応
+  - Pydantic settings, config.toml/json support
 - `pixoo_spotify/ui.py`
-  - Rich による表示（フォアグラウンド時）
+  - Rich UI output (foreground mode)
 - `pixoo_spotify/dummy.py`
-  - ダミー用の Track + Artwork
+  - Dummy track + artwork
 - `tests/`
-  - GIF 生成・設定マージのテスト
+  - Tests for GIF generation and config merging
 - `release-log.md`
-  - HEAD に未リリースの変更をまとめ、リリース時にバージョン節へ移動
+  - Unreleased notes in HEAD, move to version section on release
 - `build.py`
-  - リリース用ヘルパー（テスト/ビルド/公開/タグ付け、未コミットやリリースログ不足で失敗）
+  - Release helper (test/build/publish/tag, fails on dirty tree or missing release log)
 
-### 依存関係
+### Dependencies
 - Runtime: `typer`, `pydantic`, `spotipy`, `httpx`, `pillow`, `langdetect`, `rich`
 - Dev: `pytest`, `ruff`, `ty`, `tox`, `tox-uv`
-- dev extra に登録済み: `uv run --extra dev tox`
+- Dev extra registered: `uv run --extra dev tox`
 
-### Spotify 認証（PKCE）
-- PKCE を利用し `client_secret` は不要（`client_id` のみ必須）。
-- `redirect_uri` は `http://127.0.0.1:8888/callback` がデフォルト。
-- GUI ブラウザが使える場合は自動で認証完結（ローカルリダイレクト受信）。
-- GUI が使えない場合は URL を別端末で開き、リダイレクトURLをコピペするフロー。
-- `client_id` は `auth --client-id` で必ず渡す。保存された値を以後の実行で自動利用する。
-- 認証情報の保存先は platformdirs の config ディレクトリ配下。
+### Spotify auth (PKCE)
+- Uses PKCE, no `client_secret` required (only `client_id`).
+- Default `redirect_uri` is `http://127.0.0.1:8888/callback`.
+- If a GUI browser is available, auth completes automatically via local redirect.
+- Without GUI, open the URL on another device and copy the redirect URL back.
+- Always pass `client_id` with `auth --client-id`. The value is cached and reused.
+- Auth data is stored under the platform config directory.
   - Linux: `~/.config/pixoo-spotify/`
   - macOS: `~/Library/Application Support/pixoo-spotify/`
-  - `auth_spotify_client.json` と `spotify_token.json` が作成される。
-- 既存の認証ファイルがある場合は `auth --reauth` が必要。
+  - `auth_spotify_client.json` and `spotify_token.json` are created.
+- If auth files already exist, `auth --reauth` is required.
 
-### CLI 例
-- 認証: `uv run pixoo-spotify auth`
-- 実行: `uv run pixoo-spotify run --public-base-url http://<host>:8000 --device-ip <pixoo-ip>`
-- ダミーGIF作成: `uv run pixoo-spotify demo`
-- フォント導入: `uv run pixoo-spotify font-install`
-- バージョン表示: `uv run pixoo-spotify --version`
+### CLI examples
+- Auth: `uv run pixoo-spotify auth`
+- Run: `uv run pixoo-spotify run --public-base-url http://<host>:8000 --device-ip <pixoo-ip>`
+- Demo GIF: `uv run pixoo-spotify demo`
+- Install fonts: `uv run pixoo-spotify font-install`
+- Version: `uv run pixoo-spotify --version`
 
-## 3. 未確認事項 / 要検証
-- Spotify OAuth のヘッドレス環境対応（`open_browser=True`）は環境によって失敗の可能性あり。
-- PKCE のリダイレクト URL が `127.0.0.1` 以外の場合は HTTPS が必要（運用環境に注意）。
-- Pixoo 側の `Device/PlayTFGif` が実機で正常に再生されるか未検証。
-- Pixoo が GIF のスクロール表現を意図通り表示できるか未検証。
-- Pixoo からの画像取得サイズが 64px のみか、32/16 も取得可能か要確認。
-- `public_base_url` を指定しない場合の URL が Pixoo 側から到達できるかはネットワーク依存。
-- `font-install` 実行時のネットワーク失敗時の挙動。
-- 文字列の長さ制限（max 40）での表示崩れ確認が必要。
+## 3. Open questions / needs verification
+- Headless Spotify OAuth (`open_browser=True`) may fail depending on environment.
+- PKCE redirect URLs not using `127.0.0.1` require HTTPS (be careful in production).
+- Whether Pixoo `Device/PlayTFGif` plays correctly on real hardware is unverified.
+- Whether Pixoo displays GIF scrolling as intended is unverified.
+- Whether Pixoo can fetch 32/16 size images (not only 64px) needs confirmation.
+- Network reachability of Pixoo to the server when `public_base_url` is not set.
+- Behavior when network fails during `font-install`.
+- Visual overflow issues at max length (40 chars) need verification.
 
-## 4. 次の開発者への申し送り事項
-- 実機 Pixoo での再生確認を最優先で実施してください。
-- Spotify 認証は手動入力フローなので、運用を考えるなら OAuth リダイレクト受け側の実装が必要です。
-- `config.toml` のサンプルがまだ無いので、運用向けにテンプレ追加が望ましいです。
-- GIF のスクロール速度・余白・位置は `GifConfig` で調整可能です。
-- 文字の言語判定は行単位で行い、`<lang>.ttf` があれば使用、なければ `fallback.ttf` を使用。
-- 64/32/16 サイズは `GifConfig.size` で変更できますが、文字表示の見え方確認が必要です。
-- テストは軽量なので、Pixoo 実機テストを自動化する場合は統合テストを追加してください。
+## 4. Notes for the next developer
+- First priority: verify playback on real Pixoo hardware.
+- Spotify auth is manual input flow; for production, add a redirect handler suitable for operations.
+- There is no `config.toml` sample yet; consider adding a template for ops.
+- Scroll speed, margins, and position are configurable in `GifConfig`.
+- Language detection is per line; use `<lang>.ttf` when available, otherwise `fallback.ttf`.
+- 64/32/16 sizes are configurable via `GifConfig.size`, but visual legibility needs testing.
+- Tests are light; add integration tests if you automate Pixoo hardware tests.
