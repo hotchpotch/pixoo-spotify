@@ -16,7 +16,7 @@ export PYPI_TOKEN="pypi-..."
 
 1) Keep `release-log.md` updated. Use the `HEAD` section for unreleased changes.
 2) When preparing a release, move the `HEAD` notes into a versioned section.
-3) Update the version in `pyproject.toml`.
+3) Update the version in `pyproject.toml` (PyPI rejects reusing the same versioned files).
 4) Add an entry for the version in `release-log.md`.
 5) Run tests and type checks:
 

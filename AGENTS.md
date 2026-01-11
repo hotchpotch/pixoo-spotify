@@ -19,6 +19,7 @@
 - HTTP server serves `/spotify_gif` (Pixoo URL includes a cache-busting `?{epoch}`).
 - Keep `release-log.md` updated. Use the `HEAD` section for unreleased changes, and move those notes into a versioned section during each release.
 - Releases should go through `python ./build.py --release`, which fails if the git worktree is dirty or the release log is missing.
+- Before release, bump `pyproject.toml` version so PyPI does not reject duplicate versioned files.
 
 ## Testing & linting
 - Run: `uv run --extra dev tox` after implementation changes and before release.
