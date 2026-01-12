@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import uuid
 from importlib import metadata
 from pathlib import Path
+from typing import Any
 
+import httpx
 import typer
 from spotipy.exceptions import SpotifyOauthError
 
@@ -31,7 +34,7 @@ from pixoo_spotify.gif import build_gif_bytes, load_font_registry
 from pixoo_spotify.models import TrackInfo
 from pixoo_spotify.net import find_open_port
 from pixoo_spotify.paths import get_auth_paths, get_fonts_dir, resolve_pixoo_spotify_config_path
-from pixoo_spotify.pixoo import discover_devices
+from pixoo_spotify.pixoo import discover_devices, get_all_conf, set_brightness, set_screen
 from pixoo_spotify.spotify import (
     SpotifyClient,
     auth_files_exist,
@@ -51,6 +54,12 @@ app = typer.Typer(
     pretty_exceptions_show_locals=False,
     invoke_without_command=True,
 )
+display_app = typer.Typer(help="Control Pixoo display.")
+brightness_app = typer.Typer(help="Control Pixoo brightness.")
+settings_app = typer.Typer(help="Query Pixoo settings.")
+app.add_typer(display_app, name="display")
+app.add_typer(brightness_app, name="brightness")
+app.add_typer(settings_app, name="settings")
 
 
 def get_version() -> str:
@@ -139,6 +148,42 @@ def build_overrides(**kwargs) -> dict:
         "poll_interval": kwargs.get("poll_interval"),
         "idle_poll_interval": kwargs.get("idle_poll_interval"),
     }
+
+
+async def resolve_pixoo_device_ip(
+    client: httpx.AsyncClient, device_ip: str | None, discover: bool
+) -> str | None:
+    if device_ip:
+        return device_ip
+    if not discover:
+        return None
+    devices = await discover_devices(client)
+    if not devices:
+        return None
+    return devices[0].device_private_ip
+
+
+def ensure_pixoo_success(payload: dict[str, Any], action: str) -> None:
+    error_code = payload.get("error_code", 0)
+    if error_code != 0:
+        typer.echo(f"{action} failed (error_code={error_code}).", err=True)
+        raise typer.Exit(code=1)
+
+
+def find_brightness(payload: Any) -> Any | None:
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            if isinstance(key, str) and key.lower() == "brightness":
+                return value
+            found = find_brightness(value)
+            if found is not None:
+                return found
+    elif isinstance(payload, list):
+        for item in payload:
+            found = find_brightness(item)
+            if found is not None:
+                return found
+    return None
 
 
 @app.command(help="Run the Pixoo Spotify GIF server and optional device playback.")
@@ -520,14 +565,150 @@ def font_install(
 @app.command()
 def devices() -> None:
     async def _discover() -> None:
-        import httpx
-
         async with httpx.AsyncClient(timeout=10) as client:
             devices = await discover_devices(client)
             for device in devices:
                 typer.echo(f"{device.device_name} {device.device_private_ip}")
 
     asyncio.run(_discover())
+
+
+@display_app.command("on")
+def display_on(
+    device_ip: str | None = typer.Option(None, help="Pixoo device IP address."),
+    discover: bool = typer.Option(
+        True,
+        "--discover/--no-discover",
+        help="Auto-discover Pixoo on LAN.",
+        show_default=True,
+    ),
+) -> None:
+    async def _run() -> None:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resolved = await resolve_pixoo_device_ip(client, device_ip, discover)
+            if resolved is None:
+                typer.echo(
+                    "Pixoo device not found. Use --device-ip or enable --discover.",
+                    err=True,
+                )
+                raise typer.Exit(code=1)
+            response = await set_screen(client, resolved, True)
+            ensure_pixoo_success(response, "Display on")
+            typer.echo("Display on.")
+
+    asyncio.run(_run())
+
+
+@display_app.command("off")
+def display_off(
+    device_ip: str | None = typer.Option(None, help="Pixoo device IP address."),
+    discover: bool = typer.Option(
+        True,
+        "--discover/--no-discover",
+        help="Auto-discover Pixoo on LAN.",
+        show_default=True,
+    ),
+) -> None:
+    async def _run() -> None:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resolved = await resolve_pixoo_device_ip(client, device_ip, discover)
+            if resolved is None:
+                typer.echo(
+                    "Pixoo device not found. Use --device-ip or enable --discover.",
+                    err=True,
+                )
+                raise typer.Exit(code=1)
+            response = await set_screen(client, resolved, False)
+            ensure_pixoo_success(response, "Display off")
+            typer.echo("Display off.")
+
+    asyncio.run(_run())
+
+
+@brightness_app.command("set")
+def brightness_set(
+    brightness: int = typer.Option(
+        ..., "--value", "--brightness", min=0, max=100, show_default=True
+    ),
+    device_ip: str | None = typer.Option(None, help="Pixoo device IP address."),
+    discover: bool = typer.Option(
+        True,
+        "--discover/--no-discover",
+        help="Auto-discover Pixoo on LAN.",
+        show_default=True,
+    ),
+) -> None:
+    async def _run() -> None:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resolved = await resolve_pixoo_device_ip(client, device_ip, discover)
+            if resolved is None:
+                typer.echo(
+                    "Pixoo device not found. Use --device-ip or enable --discover.",
+                    err=True,
+                )
+                raise typer.Exit(code=1)
+            response = await set_brightness(client, resolved, brightness)
+            ensure_pixoo_success(response, "Brightness set")
+            typer.echo(f"Brightness set to {brightness}.")
+
+    asyncio.run(_run())
+
+
+@brightness_app.command("get")
+def brightness_get(
+    device_ip: str | None = typer.Option(None, help="Pixoo device IP address."),
+    discover: bool = typer.Option(
+        True,
+        "--discover/--no-discover",
+        help="Auto-discover Pixoo on LAN.",
+        show_default=True,
+    ),
+) -> None:
+    async def _run() -> None:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resolved = await resolve_pixoo_device_ip(client, device_ip, discover)
+            if resolved is None:
+                typer.echo(
+                    "Pixoo device not found. Use --device-ip or enable --discover.",
+                    err=True,
+                )
+                raise typer.Exit(code=1)
+            response = await get_all_conf(client, resolved)
+            ensure_pixoo_success(response, "Brightness get")
+            brightness_value = find_brightness(response)
+            if brightness_value is None:
+                typer.echo("Brightness not found in response.", err=True)
+                typer.echo(json.dumps(response, ensure_ascii=False, indent=2))
+                raise typer.Exit(code=1)
+            typer.echo(str(brightness_value))
+
+    asyncio.run(_run())
+
+
+@settings_app.command("all")
+def settings_all(
+    device_ip: str | None = typer.Option(None, help="Pixoo device IP address."),
+    discover: bool = typer.Option(
+        True,
+        "--discover/--no-discover",
+        help="Auto-discover Pixoo on LAN.",
+        show_default=True,
+    ),
+) -> None:
+    async def _run() -> None:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resolved = await resolve_pixoo_device_ip(client, device_ip, discover)
+            if resolved is None:
+                typer.echo(
+                    "Pixoo device not found. Use --device-ip or enable --discover.",
+                    err=True,
+                )
+                raise typer.Exit(code=1)
+            response = await get_all_conf(client, resolved)
+            ensure_pixoo_success(response, "Settings get")
+            typer.echo(json.dumps(response, ensure_ascii=False, indent=2))
+
+    asyncio.run(_run())
 
 
 @app.command()

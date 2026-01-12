@@ -43,6 +43,27 @@ async def play_gif(client: httpx.AsyncClient, device_ip: str, gif_url: str) -> d
     return response.json()
 
 
+async def set_brightness(
+    client: httpx.AsyncClient, device_ip: str, brightness: int
+) -> dict[str, Any]:
+    payload = {
+        "Command": "Channel/SetBrightness",
+        "Brightness": brightness,
+    }
+    response = await client.post(f"http://{device_ip}:80/post", json=payload)
+    response.raise_for_status()
+    return response.json()
+
+
+async def get_all_conf(client: httpx.AsyncClient, device_ip: str) -> dict[str, Any]:
+    payload = {
+        "Command": "Channel/GetAllConf",
+    }
+    response = await client.post(f"http://{device_ip}:80/post", json=payload)
+    response.raise_for_status()
+    return response.json()
+
+
 async def stop_gif(client: httpx.AsyncClient, device_ip: str) -> dict[str, Any]:
     payload = {
         "Command": "Device/PlayTFGif",

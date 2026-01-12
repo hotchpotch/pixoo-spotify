@@ -2,7 +2,7 @@ import asyncio
 import json
 
 import httpx
-from pixoo_spotify.pixoo import discover_devices, play_gif
+from pixoo_spotify.pixoo import discover_devices, get_all_conf, play_gif, set_brightness
 
 
 def test_discover_devices() -> None:
@@ -51,5 +51,41 @@ def test_play_gif_request() -> None:
                 client, "192.168.24.83", "http://example.com/spotify_gif?123"
             )
             assert response["error_code"] == 0
+
+    asyncio.run(run())
+
+
+def test_set_brightness_request() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url == httpx.URL("http://192.168.24.83:80/post")
+        body = json.loads(request.content.decode("utf-8"))
+        assert body["Command"] == "Channel/SetBrightness"
+        assert body["Brightness"] == 42
+        return httpx.Response(200, json={"error_code": 0})
+
+    transport = httpx.MockTransport(handler)
+
+    async def run() -> None:
+        async with httpx.AsyncClient(transport=transport) as client:
+            response = await set_brightness(client, "192.168.24.83", 42)
+            assert response["error_code"] == 0
+
+    asyncio.run(run())
+
+
+def test_get_all_conf_request() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url == httpx.URL("http://192.168.24.83:80/post")
+        body = json.loads(request.content.decode("utf-8"))
+        assert body["Command"] == "Channel/GetAllConf"
+        return httpx.Response(200, json={"error_code": 0, "Brightness": 80})
+
+    transport = httpx.MockTransport(handler)
+
+    async def run() -> None:
+        async with httpx.AsyncClient(transport=transport) as client:
+            response = await get_all_conf(client, "192.168.24.83")
+            assert response["error_code"] == 0
+            assert response["Brightness"] == 80
 
     asyncio.run(run())
