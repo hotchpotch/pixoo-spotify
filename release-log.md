@@ -3,6 +3,7 @@
 ## HEAD
 
 - (unreleased)
+- Continue running if Pixoo GIF delivery fails (e.g., connection timeouts), logging the error instead of crashing.
 
 ## 0.0.4
 

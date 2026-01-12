@@ -108,11 +108,15 @@ async def run_app(config: AppConfig, *, verbose: bool = False) -> None:
                             await asyncio.to_thread(gif_path.write_bytes, gif_bytes)
                             if config.pixoo.play_on_device and device_ip:
                                 epoch = int(time.time())
-                                await play_gif(
-                                    client,
-                                    device_ip,
-                                    f"{base_url.rstrip('/')}/spotify_gif?{epoch}",
-                                )
+                                try:
+                                    await play_gif(
+                                        client,
+                                        device_ip,
+                                        f"{base_url.rstrip('/')}/spotify_gif?{epoch}",
+                                    )
+                                except httpx.HTTPError as exc:
+                                    logger.warning("Failed to send Pixoo GIF: %s", exc)
+                                    logger.debug("Pixoo GIF send failed details.", exc_info=True)
                             render_track(track)
                             last_signature = signature
                         idle_streak = 0
