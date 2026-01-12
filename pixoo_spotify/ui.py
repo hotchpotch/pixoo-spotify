@@ -39,11 +39,13 @@ class AppUI:
         self._console = Console()
         self._layout = Layout()
         self._track_panel = Panel("No track", title="Now Playing", border_style="green")
+        self._status_panel = Panel("No status", title="Status", border_style="magenta")
         self._log = LogBuffer("Logs")
         self._lock = threading.Lock()
 
         self._layout.split_column(
             Layout(name="track", size=6),
+            Layout(name="status", size=4),
             Layout(name="logs"),
         )
         self._refresh()
@@ -72,9 +74,21 @@ class AppUI:
         self._log.append(line)
         self._refresh()
 
+    def update_status(self, pixoo_status: str, server_url: str) -> None:
+        table = Table.grid(padding=(0, 1))
+        table.add_column(style="bold yellow", width=10)
+        table.add_column(style="white")
+        table.add_row("Pixoo", pixoo_status)
+        table.add_row("Server", server_url)
+        panel = Panel(table, title="Status", border_style="magenta", expand=True)
+        with self._lock:
+            self._status_panel = panel
+        self._refresh()
+
     def _refresh(self) -> None:
         with self._lock:
             self._layout["track"].update(self._track_panel)
+            self._layout["status"].update(self._status_panel)
         self._layout["logs"].update(self._log.render())
 
 
@@ -120,6 +134,11 @@ def render_track(track: TrackInfo) -> None:
         track.album or "-",
         track.artwork_url or "-",
     )
+
+
+def update_status(pixoo_status: str, server_url: str) -> None:
+    if _UI is not None:
+        _UI.update_status(pixoo_status, server_url)
 
 
 def configure_logging(

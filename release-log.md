@@ -4,6 +4,9 @@
 
 - (unreleased)
 - Continue running if Pixoo GIF delivery fails (e.g., connection timeouts), logging the error instead of crashing.
+- Rediscover Pixoo and refresh the local base URL after Pixoo connection errors when using auto-detected endpoints.
+- Attempt Pixoo rediscovery on track changes when the device is missing or a previous Pixoo request failed, with informative logs.
+- Add a Rich UI status panel showing Pixoo connectivity and the local server URL.
 
 ## 0.0.4
 

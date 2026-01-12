@@ -16,7 +16,13 @@ from pixoo_spotify.net import local_ip_for_target
 from pixoo_spotify.pixoo import discover_devices, play_gif, set_screen, stop_gif
 from pixoo_spotify.server import GifHttpServer
 from pixoo_spotify.spotify import SpotifyClient, retry_after_seconds, validate_spotify_config
-from pixoo_spotify.ui import configure_logging, render_track, start_ui, stop_ui
+from pixoo_spotify.ui import (
+    configure_logging,
+    render_track,
+    start_ui,
+    stop_ui,
+    update_status,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +50,8 @@ async def run_app(config: AppConfig, *, verbose: bool = False) -> None:
 
         spotify = SpotifyClient(config.spotify)
         device_ip: str | None = config.pixoo.device_ip
+        auto_device_ip = False
+        pixoo_error = False
         if device_ip:
             logger.info("Pixoo device IP (configured): %s", device_ip)
 
@@ -53,17 +61,97 @@ async def run_app(config: AppConfig, *, verbose: bool = False) -> None:
                 if devices:
                     device = devices[0]
                     device_ip = device.device_private_ip
+                    auto_device_ip = True
                     logger.info("Pixoo device discovered: %s (%s)", device.device_name, device_ip)
 
             base_url = config.server.base_url()
+            auto_base_url = False
             if config.server.public_base_url is None and device_ip:
                 local_ip = local_ip_for_target(device_ip)
                 if local_ip:
                     base_url = f"http://{local_ip}:{config.server.port}"
+                    auto_base_url = True
                     logger.info("Resolved local base URL for Pixoo: %s", base_url)
             if config.server.public_base_url is not None:
                 logger.info("Using configured public base URL: %s", base_url)
 
+            def format_pixoo_status() -> str:
+                if not config.pixoo.play_on_device:
+                    return "disabled"
+                if device_ip is None:
+                    if config.pixoo.discover:
+                        return "not found"
+                    return "not configured"
+                source = "auto" if auto_device_ip else "configured"
+                state = "error" if pixoo_error else "ok"
+                return f"{device_ip} ({source}, {state})"
+
+            def update_ui_status() -> None:
+                update_status(format_pixoo_status(), base_url)
+
+            async def refresh_pixoo_endpoints(reason: str, *, log_info: bool = False) -> None:
+                nonlocal device_ip, base_url, auto_base_url, auto_device_ip
+                if not config.pixoo.discover:
+                    if log_info:
+                        logger.info("Pixoo rediscovery skipped (discover disabled).")
+                    return
+                if not (auto_device_ip or device_ip is None):
+                    if log_info:
+                        logger.info("Pixoo rediscovery skipped (device IP configured).")
+                    return
+                if log_info:
+                    logger.info("Attempting Pixoo rediscovery after %s.", reason)
+                try:
+                    devices = await discover_devices(client)
+                except httpx.HTTPError as exc:
+                    if log_info:
+                        logger.info("Pixoo rediscovery failed after %s: %s", reason, exc)
+                    else:
+                        logger.debug(
+                            "Failed to rediscover Pixoo devices after %s: %s", reason, exc
+                        )
+                    return
+                if not devices:
+                    message = "Pixoo rediscovery found no devices after %s; keeping %s"
+                    if log_info:
+                        logger.info(message, reason, device_ip or "none")
+                    else:
+                        logger.debug(message, reason, device_ip or "none")
+                    return
+                device = devices[0]
+                new_ip = device.device_private_ip
+                if new_ip and (auto_device_ip or device_ip is None) and new_ip != device_ip:
+                    device_ip = new_ip
+                    auto_device_ip = True
+                    logger.info(
+                        "Pixoo device rediscovered: %s (%s)", device.device_name, device_ip
+                    )
+                elif log_info:
+                    logger.info(
+                        "Pixoo device unchanged after %s: %s", reason, device_ip or "none"
+                    )
+                if config.server.public_base_url is None and device_ip:
+                    local_ip = local_ip_for_target(device_ip)
+                    if local_ip:
+                        new_base_url = f"http://{local_ip}:{config.server.port}"
+                        if new_base_url != base_url:
+                            base_url = new_base_url
+                            auto_base_url = True
+                            logger.info("Updated local base URL for Pixoo: %s", base_url)
+                        elif log_info:
+                            logger.info("Local base URL unchanged after %s: %s", reason, base_url)
+                update_ui_status()
+
+            async def refresh_pixoo_on_request_error(
+                exc: httpx.HTTPError, reason: str
+            ) -> None:
+                nonlocal pixoo_error
+                pixoo_error = True
+                update_ui_status()
+                if isinstance(exc, httpx.RequestError):
+                    await refresh_pixoo_endpoints(reason)
+
+            update_ui_status()
             server.start()
             last_signature: str | None = None
             last_playing = False
@@ -90,11 +178,16 @@ async def run_app(config: AppConfig, *, verbose: bool = False) -> None:
                                 try:
                                     await set_screen(client, device_ip, True)
                                     logger.info("Pixoo screen ON")
-                                except httpx.HTTPError:
+                                    pixoo_error = False
+                                    update_ui_status()
+                                except httpx.HTTPError as exc:
                                     logger.debug("Failed to turn on Pixoo screen.")
+                                    await refresh_pixoo_on_request_error(exc, "screen_on")
                             screen_initialized = True
                         signature = f"{track.id}:{track.title}:{track.artist}"
                         if signature != last_signature:
+                            if config.pixoo.play_on_device and (device_ip is None or pixoo_error):
+                                await refresh_pixoo_endpoints("track_change", log_info=True)
                             artwork = await fetch_artwork(
                                 str(track.artwork_url) if track.artwork_url else None,
                                 config.gif.image_size or config.gif.size,
@@ -114,9 +207,12 @@ async def run_app(config: AppConfig, *, verbose: bool = False) -> None:
                                         device_ip,
                                         f"{base_url.rstrip('/')}/spotify_gif?{epoch}",
                                     )
+                                    pixoo_error = False
+                                    update_ui_status()
                                 except httpx.HTTPError as exc:
                                     logger.warning("Failed to send Pixoo GIF: %s", exc)
                                     logger.debug("Pixoo GIF send failed details.", exc_info=True)
+                                    await refresh_pixoo_on_request_error(exc, "play_gif")
                             render_track(track)
                             last_signature = signature
                         idle_streak = 0
@@ -131,22 +227,31 @@ async def run_app(config: AppConfig, *, verbose: bool = False) -> None:
                             try:
                                 await set_screen(client, device_ip, False)
                                 logger.info("Pixoo screen OFF (idle at startup)")
-                            except httpx.HTTPError:
+                                pixoo_error = False
+                                update_ui_status()
+                            except httpx.HTTPError as exc:
                                 logger.debug("Failed to turn off Pixoo screen on start.")
+                                await refresh_pixoo_on_request_error(exc, "screen_off_start")
                             screen_initialized = True
                         if last_playing and config.pixoo.play_on_device and device_ip:
                             if config.pixoo.auto_screen_off:
                                 try:
                                     await set_screen(client, device_ip, False)
                                     logger.info("Pixoo screen OFF")
-                                except httpx.HTTPError:
+                                    pixoo_error = False
+                                    update_ui_status()
+                                except httpx.HTTPError as exc:
                                     logger.debug("Failed to turn off Pixoo screen.")
+                                    await refresh_pixoo_on_request_error(exc, "screen_off")
                             else:
                                 try:
                                     await stop_gif(client, device_ip)
                                     logger.info("Pixoo display reset (stop GIF)")
-                                except httpx.HTTPError:
+                                    pixoo_error = False
+                                    update_ui_status()
+                                except httpx.HTTPError as exc:
                                     logger.debug("Failed to stop Pixoo GIF.")
+                                    await refresh_pixoo_on_request_error(exc, "stop_gif")
                         last_signature = None
                         last_playing = False
                         idle_streak += 1
@@ -161,14 +266,20 @@ async def run_app(config: AppConfig, *, verbose: bool = False) -> None:
                         try:
                             await set_screen(client, device_ip, False)
                             logger.info("Pixoo screen OFF (shutdown)")
-                        except httpx.HTTPError:
+                            pixoo_error = False
+                            update_ui_status()
+                        except httpx.HTTPError as exc:
                             logger.debug("Failed to turn off Pixoo screen on shutdown.")
+                            await refresh_pixoo_on_request_error(exc, "screen_off_shutdown")
                     else:
                         try:
                             await stop_gif(client, device_ip)
                             logger.info("Pixoo display reset (shutdown)")
-                        except httpx.HTTPError:
+                            pixoo_error = False
+                            update_ui_status()
+                        except httpx.HTTPError as exc:
                             logger.debug("Failed to stop Pixoo GIF on shutdown.")
+                            await refresh_pixoo_on_request_error(exc, "stop_gif_shutdown")
                 server.stop()
     finally:
         if ui is not None:
