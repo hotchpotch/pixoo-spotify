@@ -206,9 +206,8 @@ def build_frames(
     for line in lines:
         font = fonts.font_for_text(line)
         width, height, offset_y = measure_text_bbox(font, line)
-        line_box_height = measure_line_height(font, height)
         line_metrics.append((font, width, height, offset_y))
-        heights.append(line_box_height)
+        heights.append(height)
 
     line_height = max(heights, default=8)
     line_gap = 1
@@ -319,7 +318,7 @@ def build_frames(
                 )
                 x = origin_x + offset
             line_top = origin_y + idx * line_step
-            y = line_top + line_height - _height - offset_y
+            y = line_top - offset_y
             draw_scrolling_text(
                 draw,
                 line,
@@ -450,16 +449,6 @@ def measure_text_bbox(font: FontType, text: str) -> tuple[int, int, int]:
     return (width, height, int(bbox[1]))
 
 
-def measure_line_height(font: FontType, fallback_height: int) -> int:
-    if not isinstance(font, ImageFont.FreeTypeFont):
-        return fallback_height
-    try:
-        ascent, descent = font.getmetrics()
-    except Exception:
-        return fallback_height
-    if ascent <= 0 and descent <= 0:
-        return fallback_height
-    return max(fallback_height, int(ascent + descent))
 
 
 def compute_scroll_offset(

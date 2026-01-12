@@ -8,7 +8,6 @@
 - Attempt Pixoo rediscovery on track changes when the device is missing or a previous Pixoo request failed, with informative logs.
 - Add a Rich UI status panel showing Pixoo connectivity and the local server URL.
 - Add Pixoo CLI commands for display on/off, brightness set/get, and full settings fetch.
-- Align text rendering to the bottom of each line box so short glyphs don't float upward.
 
 ## 0.0.4
 
