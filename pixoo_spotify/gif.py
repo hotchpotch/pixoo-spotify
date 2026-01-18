@@ -11,6 +11,7 @@ from langdetect import DetectorFactory, detect_langs
 from PIL import Image, ImageDraw, ImageFont
 
 from pixoo_spotify.config import DitherMode, GifConfig, PaletteMode, ScrollMode, TextPosition
+from pixoo_spotify.image_filters import build_image_filter_chain, format_image_filter_chain
 from pixoo_spotify.langs import get_langdetect_languages
 from pixoo_spotify.models import TrackInfo
 
@@ -142,7 +143,7 @@ def _packaged_fallback_font() -> Path:
     return path
 
 
-async def fetch_artwork(url: str | None, size: int) -> Image.Image | None:
+async def fetch_artwork(url: str | None) -> Image.Image | None:
     if not url:
         return None
     async with httpx.AsyncClient(timeout=30) as client:
@@ -153,7 +154,7 @@ async def fetch_artwork(url: str | None, size: int) -> Image.Image | None:
         image = Image.open(io.BytesIO(response.content)).convert("RGB")
     except Exception:
         return None
-    return image.resize((size, size), Image.Resampling.LANCZOS)
+    return image
 
 
 def build_gif_bytes(
@@ -185,10 +186,11 @@ def build_frames(
     artwork: Image.Image | None,
 ) -> list[Image.Image]:
     size = config.size
+    artwork_processed, artwork_size = apply_artwork_filters(artwork, config)
     background = prepare_background(
-        artwork=artwork,
+        artwork=artwork_processed,
         size=size,
-        image_size=config.image_size or size,
+        image_size=artwork_size,
         background_color=config.background_color,
     )
 
@@ -510,6 +512,23 @@ def prepare_background(
     if base_size != size:
         background = background.resize((size, size), Image.Resampling.NEAREST)
     return background
+
+
+def apply_artwork_filters(
+    artwork: Image.Image | None,
+    config: GifConfig,
+) -> tuple[Image.Image | None, int]:
+    base_size = config.image_size or config.size
+    if artwork is None:
+        return None, base_size
+    if not config.image_filters:
+        return artwork, base_size
+    chain = build_image_filter_chain(config.image_filters, base_size=base_size)
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("Artwork filters: %s", format_image_filter_chain(chain))
+    filtered = chain.apply(artwork)
+    size = filtered.size[0]
+    return filtered, size
 
 
 def overlay_bounds(origin_y: int, text_area_height: int, size: int) -> tuple[int, int]:

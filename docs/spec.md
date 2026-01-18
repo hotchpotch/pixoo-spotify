@@ -25,6 +25,8 @@
   - Main loop: Spotify -> GIF generation -> HTTP serving -> Pixoo playback
 - `pixoo_spotify/gif.py`
   - GIF generation logic (artwork + per-line scrolling)
+- `pixoo_spotify/image_filters.py`
+  - Artwork filter chain and default pixel-art filters (see docs/image_filters.md)
 - `pixoo_spotify/fonts.py`
   - Font installation (Fusion Pixel Font / manual)
 - `pixoo_spotify/spotify.py`

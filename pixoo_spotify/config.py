@@ -12,6 +12,8 @@ from typing import Any
 from platformdirs import user_config_dir
 from pydantic import AliasChoices, BaseModel, Field, HttpUrl, field_validator, model_validator
 
+from pixoo_spotify.image_filters import DEFAULT_IMAGE_FILTER_SPECS, build_image_filter_chain
+
 tomllib = importlib.import_module("tomllib" if sys.version_info >= (3, 11) else "tomli")
 
 
@@ -88,6 +90,7 @@ class ServerConfig(BaseModel):
 class GifConfig(BaseModel):
     size: int = Field(64, ge=16, le=64)
     image_size: int | None = Field(None, ge=16, le=64)
+    image_filters: list[str] = Field(default_factory=lambda: list(DEFAULT_IMAGE_FILTER_SPECS))
     fps: int = Field(8, ge=1, le=60)
     artwork_only: bool = False
     text_format: str = "{title}\n{artist}"
@@ -124,6 +127,31 @@ class GifConfig(BaseModel):
             raise ValueError("size must be 16, 32, or 64")
         return value
 
+    @field_validator("image_filters", mode="before")
+    @classmethod
+    def normalize_image_filters(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return []
+            return [part.strip() for part in text.split("|") if part.strip()]
+        if isinstance(value, list):
+            items: list[str] = []
+            for item in value:
+                if item is None:
+                    continue
+                text = str(item).strip()
+                if not text:
+                    continue
+                if "|" in text:
+                    items.extend(part.strip() for part in text.split("|") if part.strip())
+                else:
+                    items.append(text)
+            return items
+        raise ValueError("image_filters must be a string or list of strings")
+
     @model_validator(mode="after")
     def validate_image_size(self) -> GifConfig:
         if self.image_size is None:
@@ -132,6 +160,15 @@ class GifConfig(BaseModel):
             raise ValueError("image_size must be 16, 32, or 64")
         if self.image_size > self.size:
             raise ValueError("image_size must be less than or equal to size")
+        return self
+
+    @model_validator(mode="after")
+    def validate_image_filters(self) -> GifConfig:
+        base_size = self.image_size or self.size
+        try:
+            build_image_filter_chain(self.image_filters, base_size=base_size)
+        except ValueError as exc:
+            raise ValueError(f"image_filters invalid: {exc}") from exc
         return self
 
     @field_validator("overlay_color", "text_color", "text_shadow_color")

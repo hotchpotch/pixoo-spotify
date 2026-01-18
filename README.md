@@ -56,6 +56,21 @@ uvx pixoo-spotify run --help
 
 If you run with no options, the app will try to infer the Spotify language from your environment and discover the Pixoo device on your local network. You can also provide all values manually.
 
+## Image filters
+
+You can post-process album artwork with an image filter chain:
+
+```
+uvx pixoo-spotify run --image-filters "default"
+```
+
+See `docs/image_filters.md` for available filters and examples.
+To disable filters and use legacy resizing only:
+
+```
+uvx pixoo-spotify run --no-image-filters
+```
+
 ## Troubleshooting
 
 When the Pixoo device accesses the server, it needs permission to reach port 18080 on the machine running pixoo_spotify. If the OS firewall blocks this port, allow or open it.

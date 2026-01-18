@@ -47,6 +47,7 @@ PIXOO_SPOTIFY_CONFIG_PATH: Path | None = None
 PIXOO_SPOTIFY_VERBOSE: bool = False
 DEFAULT_CONFIG = AppConfig()
 DEFAULT_TEXT_FORMAT_DISPLAY = DEFAULT_CONFIG.gif.text_format.replace("\n", "\\n")
+DEFAULT_IMAGE_FILTERS_DISPLAY = "default"
 
 app = typer.Typer(
     add_completion=False,
@@ -125,6 +126,7 @@ def build_overrides(**kwargs) -> dict:
         "gif": {
             "size": kwargs.get("gif_size"),
             "image_size": kwargs.get("image_size"),
+            "image_filters": kwargs.get("image_filters"),
         "fps": kwargs.get("gif_fps"),
         "artwork_only": kwargs.get("artwork_only"),
         "scroll_mode": kwargs.get("scroll_mode"),
@@ -269,6 +271,20 @@ def run(
         help="Artwork source size (16/32/64).",
         show_default="same as --gif-size",
     ),
+    image_filters: str | None = typer.Option(
+        None,
+        "--image-filters",
+        help=(
+            "Artwork filter chain (e.g. 'blur:0.6|median:3|posterize:4|quantize:32')."
+        ),
+        show_default=DEFAULT_IMAGE_FILTERS_DISPLAY,
+    ),
+    no_image_filters: bool = typer.Option(
+        False,
+        "--no-image-filters",
+        help="Disable artwork filters (use legacy resize only).",
+        show_default=False,
+    ),
     gif_fps: int | None = typer.Option(
         None, help="GIF frames per second.", show_default=str(DEFAULT_CONFIG.gif.fps)
     ),
@@ -381,6 +397,9 @@ def run(
         raise typer.Exit(code=1)
     if cache_path is None:
         cache_path = get_auth_paths(config_path)[1]
+    image_filters_override: list[str] | str | None = image_filters
+    if no_image_filters:
+        image_filters_override = []
     overrides = build_overrides(
         client_id=resolved_client_id,
         redirect_uri=redirect_uri,
@@ -397,6 +416,7 @@ def run(
         public_base_url=public_base_url,
         gif_size=gif_size,
         image_size=image_size,
+        image_filters=image_filters_override,
         gif_fps=gif_fps,
         artwork_only=artwork_only,
         scroll_mode=scroll_mode,
@@ -719,6 +739,20 @@ def demo(
     image_size: int | None = typer.Option(
         None, "--image-size", show_default="same as --gif-size"
     ),
+    image_filters: str | None = typer.Option(
+        None,
+        "--image-filters",
+        help=(
+            "Artwork filter chain (e.g. 'blur:0.6|median:3|posterize:4|quantize:32')."
+        ),
+        show_default=DEFAULT_IMAGE_FILTERS_DISPLAY,
+    ),
+    no_image_filters: bool = typer.Option(
+        False,
+        "--no-image-filters",
+        help="Disable artwork filters (use legacy resize only).",
+        show_default=False,
+    ),
     text_color: str | None = typer.Option(
         None, "--text-color", show_default=DEFAULT_CONFIG.gif.text_color
     ),
@@ -748,6 +782,10 @@ def demo(
         config.gif.output_path = output
         if image_size is not None:
             config.gif = config.gif.model_copy(update={"image_size": image_size})
+        if no_image_filters:
+            config.gif = config.gif.model_copy(update={"image_filters": []})
+        elif image_filters is not None:
+            config.gif = config.gif.model_copy(update={"image_filters": image_filters})
         if text_color is not None or text_shadow_color is not None:
             config.gif = config.gif.model_copy(
                 update={
@@ -801,6 +839,20 @@ def gif(
     image_size: int | None = typer.Option(
         None, "--image-size", show_default="same as --gif-size"
     ),
+    image_filters: str | None = typer.Option(
+        None,
+        "--image-filters",
+        help=(
+            "Artwork filter chain (e.g. 'blur:0.6|median:3|posterize:4|quantize:32')."
+        ),
+        show_default=DEFAULT_IMAGE_FILTERS_DISPLAY,
+    ),
+    no_image_filters: bool = typer.Option(
+        False,
+        "--no-image-filters",
+        help="Disable artwork filters (use legacy resize only).",
+        show_default=False,
+    ),
     text_color: str | None = typer.Option(
         None, "--text-color", show_default=DEFAULT_CONFIG.gif.text_color
     ),
@@ -830,6 +882,10 @@ def gif(
         config.gif.output_path = output
         if image_size is not None:
             config.gif = config.gif.model_copy(update={"image_size": image_size})
+        if no_image_filters:
+            config.gif = config.gif.model_copy(update={"image_filters": []})
+        elif image_filters is not None:
+            config.gif = config.gif.model_copy(update={"image_filters": image_filters})
         if text_color is not None or text_shadow_color is not None:
             config.gif = config.gif.model_copy(
                 update={

@@ -189,8 +189,7 @@ async def run_app(config: AppConfig, *, verbose: bool = False) -> None:
                             if config.pixoo.play_on_device and (device_ip is None or pixoo_error):
                                 await refresh_pixoo_endpoints("track_change", log_info=True)
                             artwork = await fetch_artwork(
-                                str(track.artwork_url) if track.artwork_url else None,
-                                config.gif.image_size or config.gif.size,
+                                str(track.artwork_url) if track.artwork_url else None
                             )
                             gif_bytes = build_gif_bytes(
                                 track=track,
@@ -291,10 +290,7 @@ async def generate_gif_once(config: AppConfig, track: TrackInfo) -> Path:
     gif_path.parent.mkdir(parents=True, exist_ok=True)
     fonts_dir = Path(config.spotify.cache_path).parent / "fonts"
     font_registry = await load_font_registry(fonts_dir)
-    artwork = await fetch_artwork(
-        str(track.artwork_url) if track.artwork_url else None,
-        config.gif.image_size or config.gif.size,
-    )
+    artwork = await fetch_artwork(str(track.artwork_url) if track.artwork_url else None)
     gif_bytes = build_gif_bytes(track=track, config=config.gif, fonts=font_registry, artwork=artwork)
     await asyncio.to_thread(gif_path.write_bytes, gif_bytes)
     return gif_path
