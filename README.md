@@ -9,6 +9,10 @@ Show the artwork, title, and artist for the currently playing Spotify track on a
   </div>
 </div>
 
+See pixoo-spotify updating a Pixoo64 in real time:
+
+https://github.com/user-attachments/assets/b0999523-6a8b-48c7-a5b9-88008be070a0
+
 The app polls Spotify, renders a pixel-art GIF, serves it over HTTP, and tells the Pixoo to
 display that URL:
 

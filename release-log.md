@@ -3,9 +3,9 @@
 ## HEAD
 
 - (unreleased)
-- Rewrite the README around the current quick-start, automatic LAN setup, server operation,
-  package updates, customization, device controls, configuration, troubleshooting, and live E2E
-  workflows.
+- Rewrite the README around the current quick-start and demo media, automatic LAN setup, server
+  operation, package updates, customization, device controls, configuration, troubleshooting, and
+  live E2E workflows.
 - Detect expired or missing Spotify authorization during server operation, discard refresh tokens
   rejected with `invalid_grant`, and show interactive and headless re-authentication instructions.
 - Add opt-in live Spotify E2E coverage for refresh, playback, and `invalid_grant` handling.
