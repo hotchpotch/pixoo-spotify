@@ -423,12 +423,31 @@ uvx pixoo-spotify gif \
 | Symptom | What to check |
 | --- | --- |
 | **No Pixoo found** | Run `uvx pixoo-spotify devices`. Discovery needs outbound internet and matches devices by public IP, so a VPN, guest Wi-Fi, or client isolation will break it. Pass `--device-ip` to bypass discovery. |
+| **`Failed to send Pixoo GIF: All connection attempts failed`** | First confirm that the Pixoo and this machine can reach each other. Then check the OS firewall or local-network permission for the Python executable running pixoo-spotify. On macOS, see the note below. |
 | **The Pixoo never loads the GIF** | Allow the server port through the host firewall, and make sure `--public-base-url` is an address the *Pixoo* can reach. From another device on the LAN, `curl http://<host-ip>:<port>/` should return `{"status": "ok", "gif": "/spotify_gif"}`. |
 | **Spotify authorization missing or expired** | Run the re-authentication command printed by `run`, then restart it. See [When your Spotify session expires](#when-your-spotify-session-expires). |
 | **Spotify rejects the callback** | Register `http://127.0.0.1:8888/callback` *exactly* in the dashboard. `localhost` is not accepted. |
 | **Boxes instead of characters** | Run `uvx pixoo-spotify font-install`, or install a font for that language. |
 | **Display stays blank while music plays** | Confirm the account is added to your Spotify app's user list, and that `uvx pixoo-spotify run` reports a discovered device rather than `not found`. |
 | **Need more detail** | Add the global `--verbose` before the command: `uvx pixoo-spotify --verbose run`. |
+
+> [!NOTE]
+> **macOS: try a Python executable that already has Local Network access.** `uvx` normally uses a
+> Python installation managed by uv. macOS may allow network access for another Python executable
+> while blocking that one, even when discovery succeeds. If the log shows
+> `Failed to send Pixoo GIF: All connection attempts failed`, explicitly select an OS-approved
+> Python. For example, with a Homebrew or system Python at `/usr/local/bin/python3`:
+>
+> ```bash
+> uvx --python /usr/local/bin/python3 \
+>   --refresh-package pixoo-spotify \
+>   pixoo-spotify run
+> ```
+>
+> Use `which python3` to find the Python you normally run, and allow that executable under
+> **System Settings → Privacy & Security → Local Network** and in any firewall software you use.
+> The path may instead be `/opt/homebrew/bin/python3` on Apple Silicon Macs. This workaround also
+> applies to other operating systems where firewall policy is attached to a specific executable.
 
 ---
 
