@@ -1,3 +1,7 @@
+
+
+https://github.com/user-attachments/assets/b4a7f59e-51f3-48d3-b549-6892939583f0
+
 <div align="center">
 
 # pixoo-spotify
@@ -15,7 +19,7 @@
 
 ▶️ **See it running on a real Pixoo64:**
 
-https://github.com/user-attachments/assets/b0999523-6a8b-48c7-a5b9-88008be070a0
+https://github.com/user-attachments/assets/13760f42-3ae3-4668-8fbd-006f4dc64f96
 
 ---
 
