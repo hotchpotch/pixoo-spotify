@@ -1,83 +1,83 @@
+<div align="center">
+
 # pixoo-spotify
 
-Show the artwork, title, and artist for the currently playing Spotify track on a
-[Divoom Pixoo64](https://divoom.com/en-jp/products/pixoo-64) pixel display.
+**Your currently playing Spotify track — album art, title, and artist — live on a [Divoom Pixoo64](https://divoom.com/en-jp/products/pixoo-64).**
 
-<div style="display:inline-block; background:#0b0b0b; border:3px solid #000; padding:6px;">
-  <div style="background:#1a1a1a; padding:3px;">
-    <img src="assets/images/example.gif" alt="Spotify artwork and scrolling track information displayed as a 64×64 pixel GIF" style="display:block; border:1px solid #000; image-rendering:pixelated;">
-  </div>
+[![PyPI](https://img.shields.io/pypi/v/pixoo-spotify.svg)](https://pypi.org/project/pixoo-spotify/)
+[![Python](https://img.shields.io/pypi/pyversions/pixoo-spotify.svg)](https://pypi.org/project/pixoo-spotify/)
+[![CI](https://github.com/hotchpotch/pixoo-spotify/actions/workflows/ci.yaml/badge.svg)](https://github.com/hotchpotch/pixoo-spotify/actions/workflows/ci.yaml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+<img src="assets/images/example.gif" width="256" alt="Album artwork with scrolling track title and artist, rendered as a 64x64 pixel-art GIF">
+
 </div>
 
-See pixoo-spotify updating a Pixoo64 in real time:
+▶️ **See it running on a real Pixoo64:**
 
 https://github.com/user-attachments/assets/b0999523-6a8b-48c7-a5b9-88008be070a0
 
-The app polls Spotify, renders a pixel-art GIF, serves it over HTTP, and tells the Pixoo to
-display that URL:
+---
+
+## ✨ Why pixoo-spotify
+
+- **Two CLI commands to a working display.** Authenticate once, then `run`. A typical setup needs no IP address, port forwarding, or broker.
+- **No client secret.** Spotify Authorization Code with PKCE — you only paste a Client ID.
+- **Finds your Pixoo for you.** Device discovery, route-aware host-IP selection, and port selection happen automatically; rediscovery can recover after a network hiccup.
+- **Built for unattended operation.** Rich terminal UI when you're watching, plain logs when systemd is. Headless SSH login. Non-zero exit and a copy-pasteable fix when your Spotify session expires.
+- **Real pixel art, not a downscale.** A tuned filter pipeline (blur → median → posterize → quantize) keeps 64×64 artwork readable instead of muddy.
+- **Rendering stays on your machine.** Artwork is processed locally and served by a small local HTTP server — no third-party rendering service in the loop.
+
+### How it works
 
 ```text
-Spotify Web API → GIF renderer → local HTTP server ← Pixoo64
+Spotify Web API  →  GIF renderer  →  local HTTP server  ←  Pixoo64
 ```
 
-## Features
+pixoo-spotify polls Spotify for the current track, renders a pixel-art GIF, serves it at
+`/spotify_gif` from a lightweight local server, and tells the Pixoo to fetch that URL. Each
+update uses a cache-busting URL so the display never gets stuck on a stale frame.
 
-- Spotify Authorization Code flow with PKCE; no client secret required
-- Album artwork with scrolling title and artist text
-- 64, 32, and 16-pixel output modes
-- Pixel-art image filter chains and palette controls
-- Automatic Pixoo discovery and recovery after device connection errors
-- Rich foreground UI or plain text logs for server operation
-- English/Japanese fallback font plus optional Latin, CJK, and Korean fonts
-- Display power, brightness, and settings commands
-- Live opt-in Spotify E2E tests
+> [!IMPORTANT]
+> **The Pixoo64 and the machine running pixoo-spotify must be able to reach each other over your
+> local network.** pixoo-spotify sends commands *to* the Pixoo, and the Pixoo connects *back* to
+> download the GIF — so traffic has to flow in both directions.
+>
+> Sharing an internet connection is not enough. Guest Wi-Fi, wireless client isolation, host
+> firewalls, and some VPN or container setups block device-to-device traffic. A routed LAN is
+> fine — the two do not have to sit on the exact same subnet, as long as both directions are
+> routable.
 
-## Less network setup by design
+---
 
-The networking defaults are designed so a normal home-LAN setup usually needs no IP address or
-port configuration:
+## 📋 Requirements
 
-| Under the hood | What it means for you |
+| What | You need |
 | --- | --- |
-| Pixoo discovery | You normally do not need to look up or enter the display's IP address. |
-| Route-aware host IP selection | The app asks the operating system which local address reaches the Pixoo, avoiding the wrong Wi-Fi, Ethernet, or VPN address. |
-| Automatic port selection | When no port is configured, the first available port from `18080` through `18099` is used. |
-| Rediscovery after connection errors | If DHCP changes the Pixoo's address, the app can find it again and update the GIF URL. |
-| Cache-busting GIF URLs | Each track update gets a fresh URL so the Pixoo does not keep showing a cached image. |
+| **Hardware** | A Divoom Pixoo64 on your local network |
+| **Spotify** | A Spotify Premium account and an app registered in the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) |
+| **Runtime** | [uv](https://docs.astral.sh/uv/getting-started/installation/) (provides `uvx`); Python 3.10+ is fetched by uv automatically |
 
-Every automatic choice can still be overridden for Docker, VPN, multi-interface, and fixed-IP
-deployments.
+> [!NOTE]
+> Spotify's Development Mode requires the app owner to have an active Premium subscription. Each
+> listening account must also be added to the app's allowlist (up to five users). See Spotify's
+> current [quota-mode documentation](https://developer.spotify.com/documentation/web-api/concepts/quota-modes)
+> if authorization succeeds but playback data stays empty.
 
-## Local network requirement
+---
 
-**The machine running pixoo-spotify and the Pixoo64 must be on the same local network and able to
-connect to each other.** The app sends commands directly to the Pixoo, and the Pixoo connects back
-to the app's HTTP server to download the generated GIF.
+## 🚀 Quick start
 
-Using the same internet connection is not always sufficient: guest Wi-Fi, wireless client
-isolation, host firewalls, and some VPN or container configurations can block device-to-device
-traffic. A routed LAN is fine; the two devices do not have to use Wi-Fi or be on the exact same
-subnet as long as traffic can pass in both directions.
+### 1. Register a Spotify app
 
-## Requirements
-
-- A Pixoo64 reachable on the same local network as the machine running this app
-- A Spotify account and a [Spotify Developer](https://developer.spotify.com/dashboard) app
-- A Spotify Premium account when required by Spotify's current Development Mode policy
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) for the `uvx` command
-
-## Quick start
-
-### 1. Create a Spotify app
-
-Open the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), create an app,
-and add this exact Redirect URI:
+In the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), create an app and
+add this **exact** Redirect URI:
 
 ```text
 http://127.0.0.1:8888/callback
 ```
 
-Copy the app's Client ID. A client secret is not needed.
+Copy the **Client ID**. You do not need a client secret.
 
 ### 2. Authenticate
 
@@ -85,8 +85,12 @@ Copy the app's Client ID. A client secret is not needed.
 uvx pixoo-spotify auth --client-id "YOUR_CLIENT_ID"
 ```
 
-The Client ID and token are stored in the platform config directory, so the Client ID does not
-need to be passed to later `run` commands.
+A browser opens for approval. The Client ID and token are stored in your user config directory,
+so later commands don't need `--client-id`.
+
+> [!TIP]
+> If the browser redirect doesn't complete, the command also accepts the full redirected URL
+> pasted straight into the terminal — no need to restart.
 
 ### 3. Run
 
@@ -94,43 +98,41 @@ need to be passed to later `run` commands.
 uvx pixoo-spotify run
 ```
 
-By default, the app discovers a Pixoo on the local network, starts an HTTP server on an available
-port, polls Spotify, and updates the display when the track changes.
-
-Use `Ctrl+C` to stop it. See every available option with:
+That's it. pixoo-spotify discovers your Pixoo, starts a local server on a free port, polls
+Spotify, and updates the display on every track change. Press `Ctrl+C` to stop.
 
 ```bash
-uvx pixoo-spotify run --help
+uvx pixoo-spotify run --help   # every available option
 ```
 
-## Update pixoo-spotify
+---
 
-`uvx` runs the package in a cached, isolated environment rather than installing it permanently.
-Refresh that environment and upgrade pixoo-spotify and its compatible dependencies with:
+## 🖥️ Servers, Raspberry Pi, and SSH
+
+### Authenticate without a local browser
 
 ```bash
-uvx --upgrade pixoo-spotify --version
+uvx pixoo-spotify auth --client-id "YOUR_CLIENT_ID" --no-open-browser
 ```
 
-You can then use the normal `uvx pixoo-spotify ...` commands. To explicitly run the newest release
-in a single command, use `pixoo-spotify@latest`:
+Open the printed URL in a browser on any machine, approve access, then paste the **full redirected
+URL** back into the terminal. That browser will show "`127.0.0.1` can't be reached" — expected, and
+irrelevant. The URL in its address bar is still what you paste.
+
+> [!TIP]
+> Already authenticated? `auth` refuses to overwrite existing credentials. Add `--reauth` to
+> replace them.
+
+### Run unattended
+
+Use text mode so output is plain, timestamped lines instead of a live Rich panel:
 
 ```bash
-uvx pixoo-spotify@latest --version
+uvx pixoo-spotify run --ui text --log-format basic
 ```
 
-If you chose a persistent tool installation instead, upgrade it with:
-
-```bash
-uv tool upgrade pixoo-spotify
-```
-
-These commands upgrade pixoo-spotify, not `uv` itself. See the official
-[uv tools guide](https://docs.astral.sh/uv/guides/tools/) for details.
-
-## Server and SSH operation
-
-Use text output when running under systemd, Docker, tmux, or another non-interactive environment:
+For hosts with several interfaces, a VPN, a container network, or a Pixoo on a fixed IP, pin every
+moving part explicitly:
 
 ```bash
 uvx pixoo-spotify run \
@@ -142,114 +144,172 @@ uvx pixoo-spotify run \
   --public-base-url http://192.168.1.20:18080
 ```
 
-- `--device-ip` is the Pixoo address.
-- `--public-base-url` is the URL the Pixoo uses to fetch the generated GIF.
-- The Pixoo must be able to reach the server port through the host firewall.
-- An explicit base URL is useful on hosts with multiple interfaces, VPNs, or containers.
+| Option | What it pins |
+| --- | --- |
+| `--device-ip` / `--no-discover` | The Pixoo's address; skips discovery entirely |
+| `--server-port` | The port the local GIF server listens on |
+| `--public-base-url` | The URL the **Pixoo** uses to fetch the GIF — must be reachable *from the Pixoo* |
 
-### Authenticate from a headless server
+The Pixoo must be able to reach that server port through the host firewall.
 
-```bash
-uvx pixoo-spotify auth --client-id "YOUR_CLIENT_ID" --no-open-browser
-```
+Add `--auto-screen-off` if the panel should turn off while nothing is playing.
 
-Open the printed URL in a browser, approve access, then paste the full redirected URL back into
-the terminal. The browser may show that `127.0.0.1` cannot be reached when it is running on a
-different machine; the complete URL in its address bar is still the value to paste.
+### When your Spotify session expires
 
-### Refresh token expiration
+Spotify refresh tokens expire **six months** after authorization. When that happens — at startup or
+mid-run — pixoo-spotify does not hang waiting for input. It discards the token rejected with
+`invalid_grant`, prints ready-to-run re-authentication commands (interactive and headless), and
+exits non-zero so systemd or your supervisor reports the failure.
 
-Spotify refresh tokens expire six months after authorization. If the token expires while the app
-is running—or is already expired at startup—the app:
-
-1. stops without waiting for interactive input;
-2. discards a token rejected with `invalid_grant`;
-3. prints interactive and headless re-authentication commands; and
-4. exits with a non-zero status so the failure is visible to a service manager.
-
-Re-authenticate and restart the service or process:
+Recover with:
 
 ```bash
 uvx pixoo-spotify auth --client-id "YOUR_CLIENT_ID" --reauth --no-open-browser
 ```
 
-See [Spotify's refresh token expiration announcement](https://developer.spotify.com/blog/2026-06-18-refresh-token-expiration)
-for the policy details.
+Then restart the service. See Spotify's
+[refresh token expiration announcement](https://developer.spotify.com/blog/2026-06-18-refresh-token-expiration)
+for the policy itself.
 
-## Artwork and text customization
+<details>
+<summary><b>What the automatic networking actually does</b></summary>
 
-The default artwork filter pipeline reduces noise and colors to produce a clearer pixel-art image.
-Use a custom chain with `|` separators:
+| Behavior | Detail |
+| --- | --- |
+| **Pixoo discovery** | Asks Divoom's cloud endpoint which Pixoo devices share your public IP, then uses the first one's private address. It needs outbound internet access, and it fails if the host leaves through a different public IP than the Pixoo — a VPN or an isolated container network is the usual culprit. Pass `--device-ip` to skip it. |
+| **Host IP selection** | Asks the OS which local address routes to the Pixoo, so the GIF URL doesn't advertise the wrong Wi-Fi, Ethernet, or VPN address. |
+| **Port selection** | Without a config file or explicit port, the first free port in `18080`–`18099` is used. |
+| **Rediscovery** | After a Pixoo connection error — or a track change while the device is unreachable — discovery reruns and the GIF URL is rebuilt, so a DHCP address change heals itself. |
+| **Cache busting** | Every update appends a fresh timestamp to the GIF URL. |
+
+> **⚠️ Config-file port behavior:** Automatic port selection applies only when `--server-port` is
+> omitted and no config file is in play. If a `config.toml` sits in the working directory (it is
+> loaded automatically) or you pass `--config`, the port falls back to the built-in default `8000`
+> unless you set it. Set `[server] port` explicitly in any config file you use.
+
+Rediscovery is also skipped when you supplied `--device-ip` — an explicit address is always
+respected.
+
+</details>
+
+---
+
+## 🔄 Updating
+
+`uvx` runs pixoo-spotify from a cached, isolated environment rather than installing it. Refresh
+that cache with:
 
 ```bash
-uvx pixoo-spotify run \
-  --image-filters "blur:0.6|median:3|posterize:4|quantize:32"
+uvx --upgrade pixoo-spotify --version
 ```
 
-Disable the filter chain and use legacy resize-only behavior:
+Afterwards the plain `uvx pixoo-spotify ...` commands use the new version.
+
+<details>
+<summary><b>Other update options</b></summary>
+
+Explicitly request the newest release for a command:
+
+```bash
+uvx pixoo-spotify@latest --version
+```
+
+If you installed it persistently instead (`uv tool install pixoo-spotify`):
+
+```bash
+uv tool upgrade pixoo-spotify
+```
+
+All of these upgrade **pixoo-spotify**, not `uv` itself — for that, see the
+[uv tools guide](https://docs.astral.sh/uv/guides/tools/).
+
+</details>
+
+---
+
+## 🎨 Customization
+
+### Artwork
+
+The default filter chain (`blur:0.6|median:3|posterize:4|quantize:32`) reduces noise and color
+count so 64×64 artwork reads as pixel art. Override it with your own `|`-separated chain:
+
+```bash
+uvx pixoo-spotify run --image-filters "blur:0.6|median:3|posterize:4|quantize:32"
+```
+
+Or turn it off for plain resize-only behavior:
 
 ```bash
 uvx pixoo-spotify run --no-image-filters
 ```
 
-Other useful options include:
+Every filter and its arguments are documented in [docs/image_filters.md](docs/image_filters.md).
+
+### Text and layout
 
 ```bash
-# Artwork without text
+# Artwork only, no text
 uvx pixoo-spotify run --artwork-only
 
-# Bounce text and pause at each edge
+# Bounce the text and pause at each edge
 uvx pixoo-spotify run --scroll-mode bounce --scroll-pause-frames 15
 
-# Change text content and position
+# Change what the text says and where it sits
 uvx pixoo-spotify run \
   --text-format "{artist}\n{title}" \
   --text-position bottom-right
 ```
 
-See [docs/image_filters.md](docs/image_filters.md) for every filter and its arguments.
+`--text-format` accepts `{title}`, `{artist}`, and `{album}`, up to three `\n`-separated lines.
+`--text-position` takes `bottom-left` (default), `bottom-right`, `top-left`, or `top-right`.
+`--gif-size` accepts `16`, `32`, or `64`.
 
-## Fonts
+### Fonts
 
-The packaged Misaki Gothic font provides an 8-pixel English/Japanese fallback. To install the
-recommended Fusion Pixel Font for broader Latin, CJK, and Korean coverage, use the same `uvx`
-command as the rest of this guide:
+A packaged **Misaki Gothic** 8-pixel font covers English and Japanese out of the box. For broader
+Latin, Japanese, Korean, and Simplified/Traditional Chinese coverage, install the recommended
+**Fusion Pixel Font**:
 
 ```bash
 uvx pixoo-spotify font-install
 ```
 
-The command shows the font license and asks for confirmation before downloading. A custom font can
-also be assigned to a language code:
+The command shows the license (OFL-1.1) and asks for confirmation before downloading. You can also
+assign your own font to one language:
 
 ```bash
 uvx pixoo-spotify font-install --lang ja --font-path ./font.ttf
 ```
 
-## Device commands
+---
+
+## 📟 Device commands
 
 ```bash
-# Find Pixoo devices on the LAN
+# List Pixoo devices
 uvx pixoo-spotify devices
 
-# Turn the display on or off
-uvx pixoo-spotify display on --device-ip 192.168.1.50
+# Turn the panel on or off
+uvx pixoo-spotify display on  --device-ip 192.168.1.50
 uvx pixoo-spotify display off --device-ip 192.168.1.50
 
-# Set or read brightness
+# Set or read brightness (0-100)
 uvx pixoo-spotify brightness set --value 40 --device-ip 192.168.1.50
 uvx pixoo-spotify brightness get --device-ip 192.168.1.50
 
-# Print all settings returned by the device
+# Dump everything the device reports
 uvx pixoo-spotify settings all --device-ip 192.168.1.50
 ```
 
-Each device command uses discovery when `--device-ip` is omitted.
+Omit `--device-ip` on any of these and discovery is used instead.
 
-## Configuration file
+---
 
-`run` accepts TOML or JSON. If `config.toml` exists in the current directory, it is loaded
-automatically; use `--config` to select another file.
+## ⚙️ Configuration file
+
+`run` accepts TOML or JSON. A `config.toml` in the working directory is loaded automatically; use
+`--config` to point elsewhere. CLI options always win over file values.
 
 ```toml
 poll_interval = 5
@@ -280,37 +340,45 @@ log_format = "basic"
 uvx pixoo-spotify run --config ./config.toml
 ```
 
-CLI options override values from the configuration file.
+---
 
-## Local data
+## 📂 Where your data lives
 
-Authentication data, fonts, and the latest generated GIF are kept outside the repository.
+Credentials, fonts, and the generated GIF are kept in your user config directory — never in the
+repository. Don't commit `.env`, credentials, or token caches.
 
-| Data | macOS | Linux |
+| Data | File | Location |
 | --- | --- | --- |
-| Client ID and Spotify token | `~/Library/Application Support/pixoo-spotify/` | `~/.config/pixoo-spotify/` |
-| Installed fonts | `<config directory>/fonts/` | `<config directory>/fonts/` |
-| Latest GIF | `<config directory>/output/latest.gif` | `<config directory>/output/latest.gif` |
+| Client ID | `auth_spotify_client.json` | config directory |
+| Spotify token | `spotify_token.json` | config directory |
+| Installed fonts | `fonts/` | config directory |
+| Latest GIF | `output/latest.gif` | config directory |
 
-Use the global `--config-path` option before the command to relocate authentication files and
-fonts:
+By default, the config directory is `~/Library/Application Support/pixoo-spotify/` on macOS and
+`~/.config/pixoo-spotify/` on Linux.
+
+Relocate credentials and fonts with the global `--config-path`, placed **before** the command:
 
 ```bash
 uvx pixoo-spotify --config-path /srv/pixoo-spotify auth --client-id "YOUR_CLIENT_ID"
 uvx pixoo-spotify --config-path /srv/pixoo-spotify run
 ```
 
-Use `run --gif-output PATH` to explicitly relocate the generated GIF.
+> [!NOTE]
+> `--config-path` moves credentials and fonts, but **not** the generated GIF — it stays in the
+> platform config directory. Use `run --gif-output PATH` to move that.
 
-## Generate a GIF without a Pixoo
+---
 
-Create a demo using bundled sample data:
+## 🧪 Try it without a Pixoo
+
+Render a GIF from bundled sample data:
 
 ```bash
 uvx pixoo-spotify demo --output output/demo.gif
 ```
 
-Or provide track metadata manually:
+Or from track metadata you supply:
 
 ```bash
 uvx pixoo-spotify gif \
@@ -321,18 +389,23 @@ uvx pixoo-spotify gif \
   --output output/manual.gif
 ```
 
-## Troubleshooting
+---
 
-| Problem | What to check |
+## 🩺 Troubleshooting
+
+| Symptom | What to check |
 | --- | --- |
-| No Pixoo is found | Run `uvx pixoo-spotify devices`, confirm both devices are on the same local network, and check for guest Wi-Fi or client isolation; otherwise pass `--device-ip`. |
-| The Pixoo does not load the GIF | Allow the selected server port through the firewall and set a reachable `--public-base-url`. |
-| Spotify authorization is missing or expired | Run the re-authentication command printed by `uvx pixoo-spotify run`, then restart it. |
-| Spotify rejects the callback | Register `http://127.0.0.1:8888/callback` exactly in the Spotify Dashboard. Do not use `localhost`. |
-| Text has missing glyphs | Run `uvx pixoo-spotify font-install` or install a language-specific font. |
-| More diagnostics are needed | Add the global `--verbose` option before the command. |
+| **No Pixoo found** | Run `uvx pixoo-spotify devices`. Discovery needs outbound internet and matches devices by public IP, so a VPN, guest Wi-Fi, or client isolation will break it. Pass `--device-ip` to bypass discovery. |
+| **The Pixoo never loads the GIF** | Allow the server port through the host firewall, and make sure `--public-base-url` is an address the *Pixoo* can reach. From another device on the LAN, `curl http://<host-ip>:<port>/` should return `{"status": "ok", "gif": "/spotify_gif"}`. |
+| **Spotify authorization missing or expired** | Run the re-authentication command printed by `run`, then restart it. See [When your Spotify session expires](#when-your-spotify-session-expires). |
+| **Spotify rejects the callback** | Register `http://127.0.0.1:8888/callback` *exactly* in the dashboard. `localhost` is not accepted. |
+| **Boxes instead of characters** | Run `uvx pixoo-spotify font-install`, or install a font for that language. |
+| **Display stays blank while music plays** | Confirm the account is added to your Spotify app's user list, and that `uvx pixoo-spotify run` reports a discovered device rather than `not found`. |
+| **Need more detail** | Add the global `--verbose` before the command: `uvx pixoo-spotify --verbose run`. |
 
-## Development
+---
+
+## 🛠️ Development
 
 ```bash
 git clone https://github.com/hotchpotch/pixoo-spotify.git
@@ -343,13 +416,14 @@ uv run --extra dev tox
 
 Tox runs pytest, Ruff, and ty.
 
-### Live Spotify E2E tests
+<details>
+<summary><b>Live Spotify E2E tests (opt-in)</b></summary>
 
-The live tests use a dedicated token cache and never use the normal application token. Copy the
-sample environment file and set your Client ID:
+These tests call Spotify's real token and playback endpoints. They use a **dedicated** token cache
+and never touch your normal application token.
 
 ```bash
-cp .env.sample .env
+cp .env.sample .env   # then set SPOTIFY_CLIENT_ID
 ```
 
 Create the dedicated token once:
@@ -365,19 +439,23 @@ uv run pixoo-spotify auth \
   --no-open-browser
 ```
 
-Keep `RUN_SPOTIFY_E2E=0` in `.env` so normal test runs stay offline. Enable live access for one
-command only:
+Keep `RUN_SPOTIFY_E2E=0` in `.env` so ordinary test runs stay offline, and enable live access for a
+single command:
 
 ```bash
 RUN_SPOTIFY_E2E=1 uv run --extra dev pytest -m spotify_e2e
 ```
 
-The E2E suite calls Spotify's real token endpoint, verifies `invalid_grant` handling, refreshes the
-dedicated token, and calls the current playback API.
+The suite verifies `invalid_grant` handling, refreshes the dedicated token, and calls the current
+playback API. `.env` is git-ignored — keep it that way.
+
+</details>
+
+---
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
 
 ## Author
 
