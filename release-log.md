@@ -3,6 +3,9 @@
 ## HEAD
 
 - (unreleased)
+- Add matching local and GitHub Actions validation, verified package builds, PyPI Trusted
+  Publishing, and automated GitHub Release creation.
+- Modernize package license metadata to the SPDX form expected by current build tools.
 - Rewrite the README around the current quick-start and demo media, automatic LAN setup, server
   operation, package updates, customization, device controls, configuration, troubleshooting, and
   live E2E workflows.

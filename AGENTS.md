@@ -18,13 +18,23 @@
 - Default GIF output lives under the platform config directory (`output/latest.gif` under the same base as auth/cache). Demo/manual commands still use `output/`.
 - HTTP server serves `/spotify_gif` (Pixoo URL includes a cache-busting `?{epoch}`).
 - Keep `release-log.md` updated. Use the `HEAD` section for unreleased changes, and move those notes into a versioned section during each release.
-- Releases should go through `python ./build.py --release`, which fails if the git worktree is dirty or the release log is missing.
-- Before release, bump `pyproject.toml` version so PyPI does not reject duplicate versioned files.
-- The release script checks that `uv.lock` is up to date (`uv lock --check`).
+- Validate release artifacts locally with `python ./build.py --build`; it fails if the git worktree
+  is dirty, `uv.lock` is stale, or the versioned release-log entry is missing.
+- Before release, bump `pyproject.toml` with `uv version X.Y.Z` so `uv.lock` stays aligned and PyPI
+  does not reject a duplicate version.
+- Releases publish through `.github/workflows/release.yml` using PyPI Trusted Publishing. Do not
+  add or use a long-lived PyPI token for the normal release path.
+- A tag must be named `vX.Y.Z` and exactly match `[project].version`. Pushing the tag runs validation,
+  builds and checks distributions, publishes to PyPI, then creates the GitHub Release.
+- Until the `pypi` environment and Trusted Publisher are configured, use the release workflow's
+  manual dispatch to exercise the build job without publishing.
+- Keep `docs/release.md`, the release workflow, `build.py`, and `tests/test_release_workflow.py`
+  aligned when changing release behavior.
 
 ## Testing & linting
 - Run: `uv run --extra dev tox` after implementation changes and before release.
 - Tox runs pytest, ruff, and ty.
+- PRs and pushes to `main` must pass the same command through `.github/workflows/ci.yaml`.
 
 ## Skills
 A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and file path so you can open the source for full instructions when using a specific skill.
