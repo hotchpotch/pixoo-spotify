@@ -38,3 +38,12 @@ def test_release_notes_extracts_version_section(tmp_path: Path) -> None:
     )
 
     assert result.stdout == "- Final note\n"
+
+
+def test_release_runs_after_successful_main_ci() -> None:
+    workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+
+    assert "workflow_run:" in workflow
+    assert "github.event.workflow_run.conclusion == 'success'" in workflow
+    assert "needs.build.outputs.already_published == 'false'" in workflow
+    assert "gh release create" in workflow

@@ -3,6 +3,8 @@
 ## HEAD
 
 - (unreleased)
+- Automatically publish an unpublished package version after the merged main commit passes CI,
+  then create its matching version tag and GitHub Release.
 
 ## 0.1.0
 

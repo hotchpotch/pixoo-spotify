@@ -79,23 +79,22 @@ test output, or previously built `dist/` files.
 ## Exercise GitHub Actions before PyPI authentication
 
 Run the **Release** workflow manually from the Actions tab. A manual dispatch runs only the build
-job and uploads `python-package-distributions`; publish and GitHub Release jobs are skipped because
-the ref is not a version tag. Download and inspect the artifact from the workflow run.
+job and uploads the distributions and release notes. Publishing and GitHub Release creation remain
+disabled for manual runs. Download and inspect the artifacts from the workflow run.
 
 ## Publish after Trusted Publishing is configured
 
-After the release commit is on `main`, create and push an annotated tag:
+Merge the release PR into `main`. CI validates the merge commit first. After CI succeeds, the
+Release workflow automatically:
 
-```console
-$ git tag -a vX.Y.Z -m "Release vX.Y.Z"
-$ git push origin vX.Y.Z
-```
-
-The tag-triggered workflow validates and builds again, publishes the exact uploaded artifact to
-PyPI, and creates a GitHub Release using the `X.Y.Z` section of `release-log.md`.
+1. checks that the version is not already on PyPI;
+2. validates and builds the package again;
+3. publishes the verified artifacts through Trusted Publishing;
+4. creates the `vX.Y.Z` tag and GitHub Release from the matching `release-log.md` section.
 
 If the publish job fails because Trusted Publishing is not configured, configure PyPI and rerun the
-failed job. Do not recreate or force-push the release tag.
+failed job. Do not create or force-push the release tag manually. For an already-published package
+version, the workflow still validates the build but safely skips publishing and release creation.
 
 ## Verify the published package
 

@@ -1,10 +1,18 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
   workflow_dispatch:
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -12,13 +20,18 @@ permissions:
 jobs:
   build:
     name: Build and verify distributions
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      already_published: ${{ steps.pypi.outputs.already_published }}
+      release_sha: ${{ steps.release.outputs.sha }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v6.0.2
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up Python
         uses: actions/setup-python@v6.2.0
@@ -37,15 +50,33 @@ jobs:
         id: version
         run: echo "version=$(python build.py --print-version)" >> "${GITHUB_OUTPUT}"
 
+      - name: Select release commit
+        id: release
+        env:
+          RELEASE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+        run: echo "sha=${RELEASE_SHA}" >> "${GITHUB_OUTPUT}"
+
+      - name: Check whether version is already on PyPI
+        id: pypi
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if curl --fail --silent --show-error \
+            "https://pypi.org/pypi/pixoo-spotify/${PACKAGE_VERSION}/json" >/dev/null; then
+            echo "already_published=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "already_published=false" >> "${GITHUB_OUTPUT}"
+          fi
+
       - name: Build and verify release artifacts
         env:
-          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-        run: |
-          args=(--build)
-          if [[ -n "${RELEASE_TAG}" ]]; then
-            args+=(--tag "${RELEASE_TAG}")
-          fi
-          python build.py "${args[@]}"
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+        run: python build.py --build --tag "v${PACKAGE_VERSION}"
+
+      - name: Generate release notes
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+        run: python scripts/release-notes.py "v${PACKAGE_VERSION}" > release-notes.md
 
       - name: Upload distributions
         uses: actions/upload-artifact@v4
@@ -54,10 +85,17 @@ jobs:
           path: dist/
           if-no-files-found: error
 
+      - name: Upload release notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-release-notes
+          path: release-notes.md
+          if-no-files-found: error
+
   publish:
     name: Publish to PyPI
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'workflow_run' && needs.build.outputs.already_published == 'false'
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -81,23 +119,25 @@ jobs:
     needs:
       - build
       - publish
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'workflow_run' && needs.build.outputs.already_published == 'false'
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6.0.2
-
-      - name: Generate release notes
-        run: python scripts/release-notes.py "${GITHUB_REF_NAME}" > release-notes.md
+      - name: Download release notes
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-release-notes
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          PACKAGE_VERSION: ${{ needs.build.outputs.version }}
+          RELEASE_SHA: ${{ needs.build.outputs.release_sha }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "${GITHUB_REF_NAME}" \
-            --notes-file release-notes.md \
-            --verify-tag
+          tag="v${PACKAGE_VERSION}"
+          gh release create "${tag}" \
+            --target "${RELEASE_SHA}" \
+            --title "${tag}" \
+            --notes-file release-notes.md
