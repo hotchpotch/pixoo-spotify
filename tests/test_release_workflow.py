@@ -47,3 +47,12 @@ def test_release_runs_after_successful_main_ci() -> None:
     assert "github.event.workflow_run.conclusion == 'success'" in workflow
     assert "needs.build.outputs.already_published == 'false'" in workflow
     assert "gh release create" in workflow
+
+
+def test_github_release_can_recover_after_pypi_publish() -> None:
+    workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+
+    assert "needs.build.outputs.release_exists == 'false'" in workflow
+    assert "needs.publish.result == 'skipped'" in workflow
+    assert "name: Check out release commit" in workflow
+    assert "ref: ${{ needs.build.outputs.release_sha }}" in workflow
