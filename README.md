@@ -416,6 +416,9 @@ uv run --extra dev tox
 
 Tox runs pytest, Ruff, and ty.
 
+See [docs/release.md](docs/release.md) for PR validation, local package checks, and the PyPI Trusted
+Publishing release process.
+
 <details>
 <summary><b>Live Spotify E2E tests (opt-in)</b></summary>
 

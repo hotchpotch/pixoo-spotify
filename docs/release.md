@@ -1,56 +1,105 @@
-# PyPI Release Guide
+# Release process
 
-This project uses a Python release helper script.
+pixoo-spotify validates, builds, and publishes releases with GitHub Actions. PyPI publication uses
+[Trusted Publishing](https://docs.pypi.org/trusted-publishers/) and short-lived OpenID Connect
+credentials; the normal release path does not use a stored PyPI API token.
 
-## Prerequisites
+## One-time PyPI setup
 
-- A PyPI account
-- A PyPI API token
-- The token stored in an environment variable:
+Do not create the release tag until these settings are ready:
 
-```
-export PYPI_TOKEN="pypi-..."
-```
+1. Create the `pixoo-spotify` project on PyPI, or open its publishing settings if it already exists.
+2. Add a pending Trusted Publisher with:
+   - Owner: `hotchpotch`
+   - Repository: `pixoo-spotify`
+   - Workflow: `release.yml`
+   - Environment: `pypi`
+3. Create a GitHub environment named `pypi`. Optional required reviewers can provide a manual
+   approval gate before publication.
 
-## Release steps
+The release workflow grants `id-token: write` only to its publish job. Build and PR jobs remain
+read-only.
 
-1) Keep `release-log.md` updated. Use the `HEAD` section for unreleased changes.
-2) When preparing a release, move the `HEAD` notes into a versioned section.
-3) Update the version in `pyproject.toml` (PyPI rejects reusing the same versioned files).
-4) Add an entry for the version in `release-log.md`.
-5) Ensure `uv.lock` is up to date (the release script runs `uv lock --check`).
-6) Run tests and type checks:
+## Pull-request validation
 
-```
-uv run --extra dev tox
-```
+`.github/workflows/ci.yaml` runs for every pull request, push to `main`, and manual dispatch. It
+installs the locked development environment and runs the same suite used locally:
 
-7) Build distribution artifacts:
-
-```
-uv build
-```
-
-8) Publish to PyPI:
-
-```
-uv publish --token "$PYPI_TOKEN"
+```console
+$ uv sync --locked --extra dev
+$ uv run --extra dev tox
 ```
 
-9) Tag the release in git:
+Tox runs pytest, Ruff, and ty. Live Spotify E2E tests remain opt-in and are not run in CI because
+they require real credentials.
 
+## Prepare a release
+
+Choose a new version that has not already been published to PyPI. The examples below use
+`X.Y.Z`; replace it with the intended release version.
+
+1. Update the version and lockfile together:
+
+   ```console
+   $ uv version X.Y.Z
+   ```
+
+2. Move user-visible entries from `## HEAD` in `release-log.md` into `## X.Y.Z`, leaving the HEAD
+   section ready for future work.
+3. Update `tests/test_release_workflow.py` when the expected release version changes.
+4. Commit the release preparation and ensure the worktree is clean.
+
+## Build and inspect locally
+
+Run the complete release build without uploading anything:
+
+```console
+$ python build.py --build --tag vX.Y.Z
 ```
-git tag -a vX.Y.Z -m "Release vX.Y.Z"
-git push --tags
+
+The build helper performs all of the following:
+
+- checks that `uv.lock` is current;
+- checks that the tag, package version, and release-log section agree;
+- runs pytest, Ruff, and ty through tox;
+- removes and rebuilds `dist/` with `uv build --no-sources`;
+- validates both distributions with `twine check --strict`;
+- installs the wheel into an isolated uv environment and runs `pixoo-spotify --version`.
+
+Inspect the files before publishing:
+
+```console
+$ tar -tzf dist/pixoo_spotify-X.Y.Z.tar.gz
+$ python -m zipfile -l dist/pixoo_spotify-X.Y.Z-py3-none-any.whl
 ```
 
-## One-command release
+The distributions must not contain `.env`, Spotify tokens, local caches, virtual environments,
+test output, or previously built `dist/` files.
 
-If you already set `PYPI_TOKEN`, you can run:
+## Exercise GitHub Actions before PyPI authentication
 
+Run the **Release** workflow manually from the Actions tab. A manual dispatch runs only the build
+job and uploads `python-package-distributions`; publish and GitHub Release jobs are skipped because
+the ref is not a version tag. Download and inspect the artifact from the workflow run.
+
+## Publish after Trusted Publishing is configured
+
+After the release commit is on `main`, create and push an annotated tag:
+
+```console
+$ git tag -a vX.Y.Z -m "Release vX.Y.Z"
+$ git push origin vX.Y.Z
 ```
-python ./build.py --release
-```
 
-This will run tests, build, publish, and tag the current version as `vX.Y.Z`. If the tag already exists, it will be updated and force-pushed. It will also error if the release log entry is missing.
-The script also fails if the git worktree is dirty, unless you pass `--ignore-git-warnings`.
+The tag-triggered workflow validates and builds again, publishes the exact uploaded artifact to
+PyPI, and creates a GitHub Release using the `X.Y.Z` section of `release-log.md`.
+
+If the publish job fails because Trusted Publishing is not configured, configure PyPI and rerun the
+failed job. Do not recreate or force-push the release tag.
+
+## Verify the published package
+
+```console
+$ uvx --refresh-package pixoo-spotify pixoo-spotify --version
+$ uvx --refresh-package pixoo-spotify pixoo-spotify --help
+```
