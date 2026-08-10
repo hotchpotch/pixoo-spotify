@@ -3,6 +3,9 @@
 ## HEAD
 
 - (unreleased)
+
+## 0.1.2
+
 - Let `auth` and `run` read `SPOTIFY_CLIENT_ID` from the environment or a working-directory `.env`,
   and honor `[spotify].client_id` in TOML/JSON configuration with documented precedence.
 
