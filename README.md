@@ -9,7 +9,7 @@
 [![CI](https://github.com/hotchpotch/pixoo-spotify/actions/workflows/ci.yaml/badge.svg)](https://github.com/hotchpotch/pixoo-spotify/actions/workflows/ci.yaml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-<img src="assets/images/example.gif" width="256" alt="Album artwork with scrolling track title and artist, rendered as a 64x64 pixel-art GIF">
+<img src="assets/images/example.gif" width="64" alt="Album artwork with scrolling track title and artist, rendered as a 64x64 pixel-art GIF">
 
 </div>
 
