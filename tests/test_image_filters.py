@@ -41,6 +41,22 @@ def test_config_rejects_unknown_filter() -> None:
         GifConfig(image_filters=["nope"])
 
 
+@pytest.mark.parametrize(
+    "filter_spec",
+    [
+        "resize:32,box,extra",
+        "blur:0.6,median:3",
+        "median:3,extra",
+        "posterize:4,extra",
+        "quantize:16,floyd,extra",
+        "sharpen:0.5,extra",
+    ],
+)
+def test_config_rejects_excess_filter_arguments(filter_spec: str) -> None:
+    with pytest.raises(ValueError, match="accepts at most"):
+        GifConfig(image_filters=[filter_spec])
+
+
 def test_quantize_reduces_palette() -> None:
     image = Image.new("RGB", (64, 64))
     image.paste((255, 0, 0), (0, 0, 32, 32))

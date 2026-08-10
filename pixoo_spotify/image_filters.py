@@ -225,6 +225,8 @@ def _parse_resize(args: str) -> ImageFilterResize:
     parts = _split_args(args)
     if not parts:
         raise ValueError("resize requires a size (16/32/64)")
+    if len(parts) > 2:
+        raise ValueError("resize accepts at most 2 arguments")
     try:
         size = int(parts[0])
     except ValueError as exc:
@@ -242,6 +244,8 @@ def _parse_resize(args: str) -> ImageFilterResize:
 
 def _parse_blur(args: str) -> ImageFilterGaussianBlur:
     parts = _split_args(args)
+    if len(parts) > 1:
+        raise ValueError("blur accepts at most 1 argument")
     if not parts:
         return ImageFilterGaussianBlur()
     try:
@@ -255,6 +259,8 @@ def _parse_blur(args: str) -> ImageFilterGaussianBlur:
 
 def _parse_median(args: str) -> ImageFilterMedian:
     parts = _split_args(args)
+    if len(parts) > 1:
+        raise ValueError("median accepts at most 1 argument")
     if not parts:
         return ImageFilterMedian()
     try:
@@ -268,6 +274,8 @@ def _parse_median(args: str) -> ImageFilterMedian:
 
 def _parse_posterize(args: str) -> ImageFilterPosterize:
     parts = _split_args(args)
+    if len(parts) > 1:
+        raise ValueError("posterize accepts at most 1 argument")
     if not parts:
         return ImageFilterPosterize()
     try:
@@ -281,6 +289,8 @@ def _parse_posterize(args: str) -> ImageFilterPosterize:
 
 def _parse_quantize(args: str) -> ImageFilterQuantize:
     parts = _split_args(args)
+    if len(parts) > 2:
+        raise ValueError("quantize accepts at most 2 arguments")
     if not parts:
         return ImageFilterQuantize()
     try:
@@ -300,6 +310,8 @@ def _parse_quantize(args: str) -> ImageFilterQuantize:
 
 def _parse_sharpen(args: str) -> ImageFilterSharpen:
     parts = _split_args(args)
+    if len(parts) > 1:
+        raise ValueError("sharpen accepts at most 1 argument")
     if not parts:
         return ImageFilterSharpen()
     try:

@@ -3,6 +3,7 @@
 ## HEAD
 
 - (unreleased)
+- Reject excess image filter arguments instead of silently ignoring them.
 - Add artwork image filter chains with a default pixel-art pipeline and a `--no-image-filters` escape hatch.
 - Continue running if Pixoo GIF delivery fails (e.g., connection timeouts), logging the error instead of crashing.
 - Rediscover Pixoo and refresh the local base URL after Pixoo connection errors when using auto-detected endpoints.
