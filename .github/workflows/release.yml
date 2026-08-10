@@ -25,6 +25,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       already_published: ${{ steps.pypi.outputs.already_published }}
+      release_exists: ${{ steps.github.outputs.release_exists }}
       release_sha: ${{ steps.release.outputs.sha }}
 
     steps:
@@ -68,6 +69,18 @@ jobs:
             echo "already_published=false" >> "${GITHUB_OUTPUT}"
           fi
 
+      - name: Check whether GitHub Release already exists
+        id: github
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "v${PACKAGE_VERSION}" >/dev/null 2>&1; then
+            echo "release_exists=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "release_exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+
       - name: Build and verify release artifacts
         env:
           PACKAGE_VERSION: ${{ steps.version.outputs.version }}
@@ -79,14 +92,14 @@ jobs:
         run: python scripts/release-notes.py "v${PACKAGE_VERSION}" > release-notes.md
 
       - name: Upload distributions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: python-package-distributions
           path: dist/
           if-no-files-found: error
 
       - name: Upload release notes
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: python-package-release-notes
           path: release-notes.md
@@ -106,7 +119,7 @@ jobs:
 
     steps:
       - name: Download distributions
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: python-package-distributions
           path: dist/
@@ -119,14 +132,24 @@ jobs:
     needs:
       - build
       - publish
-    if: github.event_name == 'workflow_run' && needs.build.outputs.already_published == 'false'
+    if: >-
+      always() &&
+      github.event_name == 'workflow_run' &&
+      needs.build.result == 'success' &&
+      needs.build.outputs.release_exists == 'false' &&
+      (needs.publish.result == 'success' || needs.publish.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
+      - name: Check out release commit
+        uses: actions/checkout@v6.0.2
+        with:
+          ref: ${{ needs.build.outputs.release_sha }}
+
       - name: Download release notes
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: python-package-release-notes
 

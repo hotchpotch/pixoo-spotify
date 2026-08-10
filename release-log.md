@@ -3,8 +3,13 @@
 ## HEAD
 
 - (unreleased)
+
+## 0.1.1
+
 - Automatically publish an unpublished package version after the merged main commit passes CI,
   then create its matching version tag and GitHub Release.
+- Fix GitHub Release creation by checking out the release commit, and allow it to recover when the
+  package was already published to PyPI but its GitHub Release was not created.
 
 ## 0.1.0
 
