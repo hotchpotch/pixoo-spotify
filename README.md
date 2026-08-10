@@ -1,6 +1,6 @@
 <div align="center">
 
-# pixoo-spotify
+<h1><img src="assets/images/example.gif" width="64" alt="Pixel-art album artwork">&nbsp;pixoo-spotify</h1>
 
 **Your currently playing Spotify track — album art, title, and artist — live on a [Divoom Pixoo64](https://divoom.com/en-jp/products/pixoo-64).**
 
@@ -8,8 +8,6 @@
 [![Python](https://img.shields.io/pypi/pyversions/pixoo-spotify.svg)](https://pypi.org/project/pixoo-spotify/)
 [![CI](https://github.com/hotchpotch/pixoo-spotify/actions/workflows/ci.yaml/badge.svg)](https://github.com/hotchpotch/pixoo-spotify/actions/workflows/ci.yaml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-
-<img src="assets/images/example.gif" width="64" alt="Album artwork with scrolling track title and artist, rendered as a 64x64 pixel-art GIF">
 
 </div>
 
