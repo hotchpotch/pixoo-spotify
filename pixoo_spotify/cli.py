@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import shlex
 import uuid
 from importlib import metadata
@@ -10,6 +11,7 @@ from typing import Any
 
 import httpx
 import typer
+from dotenv import dotenv_values
 from spotipy.exceptions import SpotifyOauthError
 
 from pixoo_spotify.app import generate_gif_once, run_app
@@ -95,6 +97,42 @@ def resolve_config(config_path: Path | None, overrides: dict) -> AppConfig:
         default = Path("config.toml")
         config_path = default if default.exists() else None
     return AppConfig.from_sources(config_path, overrides)
+
+
+def resolve_run_config(
+    config_path: Path | None,
+    overrides: dict[str, Any],
+    auth_config_path: Path,
+    *,
+    dotenv_path: Path = Path(".env"),
+) -> AppConfig:
+    resolved_config_path = resolve_config_path(config_path)
+    config = AppConfig.from_sources(
+        resolved_config_path,
+        overrides,
+        defaults={"spotify": {"cache_path": get_auth_paths(auth_config_path)[1]}},
+    )
+    if config.spotify.client_id:
+        return config
+
+    environment_client_id = os.environ.get("SPOTIFY_CLIENT_ID", "").strip()
+    dotenv_client_id = ""
+    if dotenv_path.is_file():
+        value = dotenv_values(dotenv_path).get("SPOTIFY_CLIENT_ID")
+        if isinstance(value, str):
+            dotenv_client_id = value.strip()
+    resolved_client_id = (
+        environment_client_id
+        or dotenv_client_id
+        or load_cached_client_id(auth_config_path)
+    )
+    if resolved_client_id is None:
+        return config
+    return config.model_copy(
+        update={
+            "spotify": config.spotify.model_copy(update={"client_id": resolved_client_id})
+        }
+    )
 
 
 def resolve_config_path(config_path: Path | None) -> Path | None:
@@ -389,21 +427,12 @@ def run(
         LogFormat.simple, "--log-format", help="Log format (simple/basic).", show_default=True
     ),
 ) -> None:
-    config_path = resolve_pixoo_spotify_config_path(PIXOO_SPOTIFY_CONFIG_PATH)
-    resolved_client_id = client_id or load_cached_client_id(config_path)
-    if resolved_client_id is None:
-        typer.echo(
-            "Spotify client id not found. Run `pixoo-spotify auth --client-id <id>` first.",
-            err=True,
-        )
-        raise typer.Exit(code=1)
-    if cache_path is None:
-        cache_path = get_auth_paths(config_path)[1]
+    auth_config_path = resolve_pixoo_spotify_config_path(PIXOO_SPOTIFY_CONFIG_PATH)
     image_filters_override: list[str] | str | None = image_filters
     if no_image_filters:
         image_filters_override = []
     overrides = build_overrides(
-        client_id=resolved_client_id,
+        client_id=client_id,
         redirect_uri=redirect_uri,
         scope=scope,
         language=language,
@@ -439,7 +468,15 @@ def run(
         ui_mode=ui_mode,
         log_format=log_format,
     )
-    config_obj = resolve_config(config, overrides)
+    config_obj = resolve_run_config(config, overrides, auth_config_path)
+    if config_obj.spotify.client_id is None:
+        typer.echo(
+            "Spotify client id not found. Set SPOTIFY_CLIENT_ID in .env, configure "
+            "[spotify].client_id, pass --client-id, or run "
+            "`pixoo-spotify auth --client-id <id>` first.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
     if server_port is None and resolve_config_path(config) is None:
         candidate = find_open_port(config_obj.server.host, 18080, 18099)
         if candidate is not None:
@@ -497,7 +534,12 @@ def auth(
     config: Path | None = typer.Option(
         None, "--config", help="Config file (toml/json)", show_default=True
     ),
-    client_id: str = typer.Option(..., "--client-id", show_default=True),
+    client_id: str | None = typer.Option(
+        None,
+        "--client-id",
+        help="Spotify client id (also read from config.toml, the environment, or .env).",
+        show_default=True,
+    ),
     redirect_uri: str | None = typer.Option(
         None, show_default=DEFAULT_CONFIG.spotify.redirect_uri
     ),
@@ -522,16 +564,6 @@ def auth(
             err=True,
         )
         raise typer.Exit(code=1)
-    save_client_id(client_id, config_path)
-    if cache_path is None:
-        cache_path = get_auth_paths(config_path)[1]
-    final_cache_path = cache_path
-    temp_cache_path: Path | None = None
-    if reauth:
-        temp_cache_path = final_cache_path.with_name(
-            f".{final_cache_path.name}.reauth-{uuid.uuid4().hex}"
-        )
-        cache_path = temp_cache_path
     overrides = build_overrides(
         client_id=client_id,
         redirect_uri=redirect_uri,
@@ -539,7 +571,27 @@ def auth(
         cache_path=cache_path,
         open_browser=open_browser,
     )
-    config_obj = resolve_config(config, overrides)
+    config_obj = resolve_run_config(config, overrides, config_path)
+    resolved_client_id = config_obj.spotify.client_id
+    if resolved_client_id is None:
+        typer.echo(
+            "Spotify client id not found. Set SPOTIFY_CLIENT_ID in .env, configure "
+            "[spotify].client_id, or pass --client-id.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    save_client_id(resolved_client_id, config_path)
+    final_cache_path = config_obj.spotify.cache_path
+    temp_cache_path: Path | None = None
+    if reauth:
+        temp_cache_path = final_cache_path.with_name(
+            f".{final_cache_path.name}.reauth-{uuid.uuid4().hex}"
+        )
+        config_obj = config_obj.model_copy(
+            update={
+                "spotify": config_obj.spotify.model_copy(update={"cache_path": temp_cache_path})
+            }
+        )
     validate_spotify_config(config_obj.spotify)
     client = SpotifyClient(config_obj.spotify)
     try:
