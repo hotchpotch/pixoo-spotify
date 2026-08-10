@@ -24,10 +24,10 @@
   does not reject a duplicate version.
 - Releases publish through `.github/workflows/release.yml` using PyPI Trusted Publishing. Do not
   add or use a long-lived PyPI token for the normal release path.
-- A tag must be named `vX.Y.Z` and exactly match `[project].version`. Pushing the tag runs validation,
-  builds and checks distributions, publishes to PyPI, then creates the GitHub Release.
-- Until the `pypi` environment and Trusted Publisher are configured, use the release workflow's
-  manual dispatch to exercise the build job without publishing.
+- After a push to `main` passes CI, the release workflow builds and checks distributions. If
+  `[project].version` is not on PyPI, it publishes through Trusted Publishing and creates the
+  matching `vX.Y.Z` tag and GitHub Release. Already-published versions are built but not republished.
+- Manual release-workflow dispatch exercises the build job without publishing.
 - Keep `docs/release.md`, the release workflow, `build.py`, and `tests/test_release_workflow.py`
   aligned when changing release behavior.
 
