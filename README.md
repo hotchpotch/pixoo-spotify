@@ -1,7 +1,5 @@
 
 
-https://github.com/user-attachments/assets/b4a7f59e-51f3-48d3-b549-6892939583f0
-
 <div align="center">
 
 # pixoo-spotify
