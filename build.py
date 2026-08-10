@@ -5,19 +5,19 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
 
 def _load_toml() -> Any:
-    try:
-        import tomllib  # type: ignore[attr-defined]
+    if sys.version_info >= (3, 11):
+        import tomllib
 
         return tomllib
-    except ModuleNotFoundError:
-        import tomli  # type: ignore[import-not-found]
+    import tomli
 
-        return tomli
+    return tomli
 
 
 def read_project_version(pyproject_path: Path) -> str:

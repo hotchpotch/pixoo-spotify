@@ -59,6 +59,11 @@
 - If a GUI browser is available, auth completes automatically via local redirect.
 - Without GUI, open the URL on another device and copy the redirect URL back.
 - Always pass `client_id` with `auth --client-id`. The value is cached and reused.
+- Spotify refresh tokens expire 6 months after authorization. If a refresh returns
+  `invalid_grant`, discard the token cache, exit without interactive prompts, and show both
+  interactive and `--no-open-browser` re-authentication commands for server operators.
+- A missing or unusable token cache must produce the same actionable re-authentication guidance
+  instead of allowing Spotipy to start an implicit interactive flow during `run`.
 - Auth data is stored under the platform config directory.
   - Linux: `~/.config/pixoo-spotify/`
   - macOS: `~/Library/Application Support/pixoo-spotify/`

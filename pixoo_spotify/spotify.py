@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 
 import spotipy
 from pydantic import ValidationError
+from spotipy.cache_handler import CacheFileHandler
 from spotipy.exceptions import SpotifyException, SpotifyOauthError, SpotifyStateError
 from spotipy.oauth2 import start_local_http_server
 
@@ -21,16 +22,36 @@ from pixoo_spotify.paths import get_auth_paths
 logger = logging.getLogger(__name__)
 
 
+class SpotifyReauthenticationRequired(RuntimeError):
+    def __init__(
+        self,
+        *,
+        client_id: str | None,
+        cache_path: Path,
+        reason: str,
+        cache_discarded: bool = False,
+        cache_error: OSError | None = None,
+    ) -> None:
+        super().__init__("Spotify authorization must be renewed")
+        self.client_id = client_id
+        self.cache_path = cache_path
+        self.reason = reason
+        self.cache_discarded = cache_discarded
+        self.cache_error = cache_error
+
+
 class SpotifyClient:
     def __init__(self, config: SpotifyConfig):
         self._config = config
         cache_path = Path(config.cache_path)
+        self._cache_path = cache_path
         cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_handler = CacheFileHandler(cache_path=str(cache_path))
         self._auth_manager = spotipy.SpotifyPKCE(
             client_id=config.client_id,
             redirect_uri=config.redirect_uri,
             scope=config.scope,
-            cache_path=str(cache_path),
+            cache_handler=cache_handler,
             open_browser=config.open_browser,
         )
         client_kwargs = {"auth_manager": self._auth_manager}
@@ -39,21 +60,57 @@ class SpotifyClient:
         self._client = spotipy.Spotify(**client_kwargs)
 
     async def current_track(self) -> TrackInfo | None:
-        payload = await asyncio.to_thread(self._client.current_user_playing_track)
+        if not self._has_usable_token_cache():
+            raise SpotifyReauthenticationRequired(
+                client_id=self._config.client_id,
+                cache_path=self._cache_path,
+                reason="missing",
+            )
         try:
-            track = TrackInfo.from_spotify(payload)
-        except ValidationError:
-            logger.debug("Failed to parse current_user_playing_track payload.", exc_info=True)
-            track = None
-        if track is not None:
-            return track
-        logger.debug("Fallback to current_playback for metadata.")
-        payload = await asyncio.to_thread(self._client.current_playback)
+            payload = await asyncio.to_thread(self._client.current_user_playing_track)
+            try:
+                track = TrackInfo.from_spotify(payload)
+            except ValidationError:
+                logger.debug("Failed to parse current_user_playing_track payload.", exc_info=True)
+                track = None
+            if track is not None:
+                return track
+            logger.debug("Fallback to current_playback for metadata.")
+            payload = await asyncio.to_thread(self._client.current_playback)
+            try:
+                return TrackInfo.from_spotify(payload)
+            except ValidationError:
+                logger.debug("Failed to parse current_playback payload.", exc_info=True)
+                return None
+        except SpotifyOauthError as exc:
+            if exc.error != "invalid_grant":
+                raise
+            cache_discarded = False
+            cache_error: OSError | None = None
+            try:
+                self._cache_path.unlink(missing_ok=True)
+                cache_discarded = True
+            except OSError as cleanup_error:
+                cache_error = cleanup_error
+            raise SpotifyReauthenticationRequired(
+                client_id=self._config.client_id,
+                cache_path=self._cache_path,
+                reason="expired",
+                cache_discarded=cache_discarded,
+                cache_error=cache_error,
+            ) from exc
+
+    def _has_usable_token_cache(self) -> bool:
         try:
-            return TrackInfo.from_spotify(payload)
-        except ValidationError:
-            logger.debug("Failed to parse current_playback payload.", exc_info=True)
-            return None
+            payload = json.loads(self._cache_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return False
+        if not isinstance(payload, dict):
+            return False
+        return all(
+            isinstance(payload.get(name), str) and payload[name]
+            for name in ("access_token", "refresh_token")
+        )
 
     def authorize_interactive(self) -> str:
         if not self._config.open_browser:

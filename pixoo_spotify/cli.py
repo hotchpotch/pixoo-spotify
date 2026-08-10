@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shlex
 import uuid
 from importlib import metadata
 from pathlib import Path
@@ -37,6 +38,7 @@ from pixoo_spotify.paths import get_auth_paths, get_fonts_dir, resolve_pixoo_spo
 from pixoo_spotify.pixoo import discover_devices, get_all_conf, set_brightness, set_screen
 from pixoo_spotify.spotify import (
     SpotifyClient,
+    SpotifyReauthenticationRequired,
     auth_files_exist,
     load_cached_client_id,
     save_client_id,
@@ -443,7 +445,51 @@ def run(
         if candidate is not None:
             config_obj.server = config_obj.server.model_copy(update={"port": candidate})
             typer.echo(f"Using available port {candidate} (auto-selected).")
-    asyncio.run(run_app(config_obj, verbose=PIXOO_SPOTIFY_VERBOSE))
+    try:
+        asyncio.run(run_app(config_obj, verbose=PIXOO_SPOTIFY_VERBOSE))
+    except SpotifyReauthenticationRequired as exc:
+        if exc.reason == "expired":
+            typer.echo("Spotify authorization has expired.", err=True)
+        else:
+            typer.echo("Spotify authorization is missing or unusable.", err=True)
+        typer.echo(
+            "Spotify refresh tokens expire 6 months after authorization and require signing "
+            "in again.",
+            err=True,
+        )
+        if exc.cache_error is not None:
+            typer.echo(
+                f"Could not remove the unusable token cache at {exc.cache_path}: "
+                f"{exc.cache_error}",
+                err=True,
+            )
+        auth_parts = ["pixoo-spotify"]
+        if PIXOO_SPOTIFY_CONFIG_PATH is not None:
+            auth_parts.extend(["--config-path", str(PIXOO_SPOTIFY_CONFIG_PATH)])
+        auth_parts.append("auth")
+        if config is not None:
+            auth_parts.extend(["--config", str(config)])
+        auth_parts.extend(
+            [
+                "--client-id",
+                exc.client_id or "YOUR_CLIENT_ID",
+                "--reauth",
+                "--cache-path",
+                str(exc.cache_path),
+            ]
+        )
+        auth_command = shlex.join(auth_parts)
+        typer.echo(
+            "Re-authenticate from an interactive terminal:\n"
+            f"  {auth_command}\n\n"
+            "For SSH or another headless terminal:\n"
+            f"  {auth_command} --no-open-browser\n\n"
+            "After authentication, restart the pixoo-spotify service or process.\n\n"
+            "Spotify policy: "
+            "https://developer.spotify.com/blog/2026-06-18-refresh-token-expiration",
+            err=True,
+        )
+        raise typer.Exit(code=1) from exc
 
 
 @app.command()

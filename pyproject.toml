@@ -39,7 +39,7 @@ dependencies = [
     "pydantic>=2.12.5",
     "pydantic-settings>=2.12.0",
     "rich>=14.2.0",
-    "spotipy>=2.25.2",
+    "spotipy>=2.26.0",
     "tomli>=2.0.1; python_version < \"3.11\"",
     "typer>=0.21.1",
 ]
@@ -71,10 +71,12 @@ dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "pytest-xdist>=3.8.0",
-    "ruff>=0.14.11",
-    "ty>=0.0.10",
-    "tox-uv>=1.29.0",
-    "tox>=4.34.0",
+    "ruff>=0.16.2",
+    "ty>=0.0.69",
+    "tox-uv>=1.36.0",
+    "tox>=4.58.0",
+    "tomli>=2.4.1",
+    "python-dotenv>=1.2.1",
 ]
 
 [tool.pytest.ini_options]
@@ -82,6 +84,7 @@ testpaths = ["tests"]
 addopts = "--strict-markers"
 markers = [
     "slow: marks tests as slow",
+    "spotify_e2e: calls live Spotify authorization and Web API endpoints",
 ]
 
 [tool.ruff]
@@ -123,7 +126,7 @@ exclude = [
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-requires = tox-uv>=1.29.0
+requires = tox-uv>=1.36.0
 parallel = auto
 parallel_show_output = true
 env_list = py310, lint, type

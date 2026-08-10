@@ -29,6 +29,50 @@ Then authenticate once with your Client ID:
 uvx pixoo-spotify auth --client-id "CLIENT ID"
 ```
 
+Spotify refresh tokens expire 6 months after authorization. When this happens,
+`pixoo-spotify run` exits with re-authentication instructions instead of waiting for
+interactive input. Re-authenticate on the server and then restart the service or process:
+
+```
+uvx pixoo-spotify auth --client-id "CLIENT ID" --reauth
+```
+
+For an SSH or other headless session, use the manual redirect flow:
+
+```
+uvx pixoo-spotify auth --client-id "CLIENT ID" --reauth --no-open-browser
+```
+
+See Spotify's [refresh token expiration announcement](https://developer.spotify.com/blog/2026-06-18-refresh-token-expiration)
+for the current policy.
+
+### Live Spotify E2E tests
+
+The live tests are opt-in and use a dedicated token cache so they do not modify the normal
+`pixoo-spotify` authorization. Copy `.env.sample` to `.env`, set `SPOTIFY_CLIENT_ID`, and obtain
+the dedicated token once:
+
+```
+set -a
+source .env
+set +a
+uv run pixoo-spotify auth \
+  --client-id "$SPOTIFY_CLIENT_ID" \
+  --cache-path "$SPOTIFY_E2E_TOKEN_CACHE" \
+  --reauth \
+  --no-open-browser
+```
+
+Keep `RUN_SPOTIFY_E2E=0` in `.env` so normal test runs stay offline. Enable the live tests for
+one command only:
+
+```
+RUN_SPOTIFY_E2E=1 uv run --extra dev pytest -m spotify_e2e
+```
+
+This calls Spotify's real token endpoint to verify `invalid_grant`, refreshes the dedicated token,
+and calls the current playback API. Normal pytest and tox runs skip these network tests.
+
 ## Fonts (optional)
 
 By default, a bundled 8‑pixel font that supports English and Japanese [Misaki font](https://littlelimit.net/misaki.htm) is used.

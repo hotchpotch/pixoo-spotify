@@ -3,6 +3,11 @@
 ## HEAD
 
 - (unreleased)
+- Detect expired or missing Spotify authorization during server operation, discard refresh tokens
+  rejected with `invalid_grant`, and show interactive and headless re-authentication instructions.
+- Add opt-in live Spotify E2E coverage for refresh, playback, and `invalid_grant` handling.
+- Update Spotipy to 2.26.0, Ruff to 0.16.2, ty to 0.0.69, tox to 4.58.0, and
+  tox-uv to 1.36.0.
 - Reject excess image filter arguments instead of silently ignoring them.
 - Add artwork image filter chains with a default pixel-art pipeline and a `--no-image-filters` escape hatch.
 - Continue running if Pixoo GIF delivery fails (e.g., connection timeouts), logging the error instead of crashing.
