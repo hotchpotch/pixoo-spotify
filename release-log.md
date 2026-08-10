@@ -3,6 +3,9 @@
 ## HEAD
 
 - (unreleased)
+
+## 0.1.0
+
 - Add matching local and GitHub Actions validation, verified package builds, PyPI Trusted
   Publishing, and automated GitHub Release creation.
 - Modernize package license metadata to the SPDX form expected by current build tools.
