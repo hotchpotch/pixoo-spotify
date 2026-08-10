@@ -1,64 +1,122 @@
-# AGENTS.md for /Users/hotchpotch/src/github.com/hotchpotch/pixoo-spotify
+# AGENTS.md
 
-<INSTRUCTIONS>
-## Project conventions
-- Use `uv add` for all dependencies. Keep runtime deps in `[project.dependencies]`.
-- Dev tools must live in the `dev` extra. Update via `uv add --optional dev <pkgs>` (tox runs with `uv run --extra dev tox`).
-- If `uv.lock` changes, include it in the same commit.
-- Prefer async/await for IO. Keep Pydantic models for config and data payloads.
-- CLI uses Typer. Non-background mode should show a small Rich UI panel (see `pixoo_spotify/ui.py`).
-- HTTP server uses `http.server` (ThreadingHTTPServer) to keep it lightweight.
-- Spotify auth uses PKCE (no client secret required). Default redirect is `http://127.0.0.1:8888/callback`.
-- `auth` requires a Client ID from one of the supported sources and caches the resolved value under
-  the platform config directory.
-- `auth` and `run` resolve the Spotify Client ID in this order: CLI, TOML/JSON config, environment,
-  working-directory `.env`, then the platform config cache. Do not load `.env` values globally.
-- Config directory can be overridden with `--config-path` (global option).
-- For headless auth, set `--no-open-browser` and copy/paste the redirect URL.
-- Fonts live under the config directory (same location as auth files) in `fonts/`.
-- Use `pixoo-spotify font-install` to install the recommended Fusion Pixel Font.
-- If no fonts are installed, the packaged Misaki Gothic fallback is used.
-- Default GIF output lives under the platform config directory (`output/latest.gif` under the same base as auth/cache). Demo/manual commands still use `output/`.
-- HTTP server serves `/spotify_gif` (Pixoo URL includes a cache-busting `?{epoch}`).
-- Keep `release-log.md` updated. Use the `HEAD` section for unreleased changes, and move those notes into a versioned section during each release.
-- Validate release artifacts locally with `python ./build.py --build`; it fails if the git worktree
-  is dirty, `uv.lock` is stale, or the versioned release-log entry is missing.
-- Before release, bump `pyproject.toml` with `uv version X.Y.Z` so `uv.lock` stays aligned and PyPI
-  does not reject a duplicate version.
-- Releases publish through `.github/workflows/release.yml` using PyPI Trusted Publishing. Do not
-  add or use a long-lived PyPI token for the normal release path.
-- After a push to `main` passes CI, the release workflow builds and checks distributions. If
-  `[project].version` is not on PyPI, it publishes through Trusted Publishing and creates the
-  matching `vX.Y.Z` tag and GitHub Release. Already-published versions are built but not republished.
-- Manual release-workflow dispatch exercises the build job without publishing.
-- Keep `docs/release.md`, the release workflow, `build.py`, and `tests/test_release_workflow.py`
-  aligned when changing release behavior.
+This file gives coding agents and contributors the project-specific context needed to work on
+pixoo-spotify. Keep it portable: do not add absolute paths, personal tool configuration, secrets,
+or instructions that only apply to one contributor's machine.
 
-## Testing & linting
-- Run: `uv run --extra dev tox` after implementation changes and before release.
-- Tox runs pytest, ruff, and ty.
-- PRs and pushes to `main` must pass the same command through `.github/workflows/ci.yaml`.
+## Project overview
 
-## Skills
-A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and file path so you can open the source for full instructions when using a specific skill.
-### Available skills
-- skill-creator: Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Codex's capabilities with specialized knowledge, workflows, or tool integrations. (file: /Users/hotchpotch/syncthing/.codex/skills/.system/skill-creator/SKILL.md)
-- skill-installer: Install Codex skills into $CODEX_HOME/skills from a curated list or a GitHub repo path. Use when a user asks to list installable skills, install a curated skill, or install a skill from another repo (including private repos). (file: /Users/hotchpotch/syncthing/.codex/skills/.system/skill-installer/SKILL.md)
-### How to use skills
-- Discovery: The list above is the skills available in this session (name + description + file path). Skill bodies live on disk at the listed paths.
-- Trigger rules: If the user names a skill (with `$SkillName` or plain text) OR the task clearly matches a skill's description shown above, you must use that skill for that turn. Multiple mentions mean use them all. Do not carry skills across turns unless re-mentioned.
-- Missing/blocked: If a named skill isn't in the list or the path can't be read, say so briefly and continue with the best fallback.
-- How to use a skill (progressive disclosure):
-  1) After deciding to use a skill, open its `SKILL.md`. Read only enough to follow the workflow.
-  2) If `SKILL.md` points to extra folders such as `references/`, load only the specific files needed for the request; don't bulk-load everything.
-  3) If `scripts/` exist, prefer running or patching them instead of retyping large code blocks.
-  4) If `assets/` or templates exist, reuse them instead of recreating from scratch.
-- Coordination and sequencing:
-  - If multiple skills apply, choose the minimal set that covers the request and state the order you'll use them.
-  - Announce which skill(s) you're using and why (one short line). If you skip an obvious skill, say why.
-- Context hygiene:
-  - Keep context small: summarize long sections instead of pasting them; only load extra files when needed.
-  - Avoid deep reference-chasing: prefer opening only files directly linked from `SKILL.md` unless you're blocked.
-  - When variants exist (frameworks, providers, domains), pick only the relevant reference file(s) and note that choice.
-- Safety and fallback: If a skill can't be applied cleanly (missing files, unclear instructions), state the issue, pick the next-best approach, and continue.
-</INSTRUCTIONS>
+pixoo-spotify is a Python CLI that renders the current Spotify track as a 64x64 GIF, serves it
+from a lightweight local HTTP server, and instructs a Divoom Pixoo64 to fetch it. The host and the
+Pixoo must have bidirectional network connectivity.
+
+- Python 3.10 or newer
+- Package and environment management: `uv`
+- CLI: Typer and Rich
+- Configuration and payload models: Pydantic
+- Async network client: HTTPX
+- Spotify authorization: Authorization Code with PKCE; no client secret
+- GIF server: `http.server.ThreadingHTTPServer`
+
+## Repository map
+
+- `pixoo_spotify/`: application package
+- `tests/`: unit, integration, CLI, workflow, and opt-in Spotify E2E tests
+- `docs/`: detailed specifications and release documentation
+- `.github/workflows/ci.yaml`: pull-request and `main` validation
+- `.github/workflows/release.yml`: build, Trusted Publishing, tag, and GitHub Release automation
+- `build.py`: local distribution and release validation
+- `release-log.md`: user-visible release notes
+
+## Development setup
+
+```bash
+uv sync --extra dev
+uv run --extra dev tox
+```
+
+Use `uv add <package>` for runtime dependencies and `uv add --optional dev <package>` for
+development tools. Commit `uv.lock` whenever it changes. Do not edit dependency lists without
+updating the lock file.
+
+## Implementation conventions
+
+- Prefer async/await for network and other I/O work.
+- Retain Pydantic models for configuration and external data payloads.
+- Add CLI behavior through Typer. Foreground `run` mode should use the compact Rich UI in
+  `pixoo_spotify/ui.py`; unattended usage must remain usable with plain text output.
+- Keep the embedded HTTP server lightweight. It serves the generated GIF at `/spotify_gif`, and
+  Pixoo URLs use a cache-busting query string.
+- Keep server and headless operation first-class. Errors that require user action, especially an
+  expired Spotify session, must be explicit, actionable, and result in a non-zero exit status.
+- Preserve PKCE authentication and never require or store a Spotify client secret.
+- Do not log tokens, authorization codes, Client IDs, or the contents of `.env` files.
+
+### Configuration behavior
+
+- The global `--config-path` option overrides the platform configuration directory.
+- `auth` and `run` resolve the Spotify Client ID in this order: CLI option, TOML/JSON config,
+  process environment, `.env` in the working directory, then the platform config cache.
+- Read `.env` only as a configuration source; do not inject its values into the process environment.
+- The default redirect URI is `http://127.0.0.1:8888/callback`.
+- Headless authorization uses `--no-open-browser` and accepts the pasted redirect URL.
+- Fonts and the default GIF output live below the platform configuration directory. The packaged
+  Misaki Gothic font is the fallback when no user font is installed.
+- Demo and manual GIF commands may continue to use the repository-local `output/` directory.
+
+## Testing
+
+Develop changes test-first when practical. Add regression coverage for bug fixes and cover both
+success and actionable failure paths for CLI behavior.
+
+Run the complete local suite before requesting review:
+
+```bash
+uv run --extra dev tox
+```
+
+Tox runs pytest, Ruff, and ty. Pull requests and pushes to `main` run the equivalent checks in
+GitHub Actions. During development, focused tests are fine, for example:
+
+```bash
+uv run --extra dev pytest tests/test_cli.py -q
+uv run --extra dev ruff check .
+uv run --extra dev ty check
+```
+
+Live Spotify E2E tests are opt-in because they access a real account and API. Follow the README's
+E2E instructions, use local credentials only, and never commit `.env`, token caches, or generated
+authorization data. Tests must not contact a physical Pixoo unless they are explicitly marked and
+documented as hardware-dependent.
+
+## Documentation
+
+- Update `README.md` when user-facing commands, configuration, prerequisites, or troubleshooting
+  behavior changes.
+- Update `docs/spec.md` when application behavior or architecture changes.
+- Keep examples portable across macOS and Linux. If an OS-specific workaround is necessary, label
+  it clearly and avoid presenting a contributor-specific path as universal.
+- Keep `release-log.md` current. Add unreleased user-visible changes under `HEAD`.
+
+## Releases
+
+Read `docs/release.md` before changing or performing the release process.
+
+- Bump versions with `uv version X.Y.Z` so `pyproject.toml` and `uv.lock` remain aligned.
+- Move applicable `HEAD` notes in `release-log.md` into the versioned section.
+- Validate artifacts with `python ./build.py --build`. The script rejects a dirty worktree, a stale
+  lock file, and missing release notes.
+- Normal publication uses `.github/workflows/release.yml` and PyPI Trusted Publishing. Do not add
+  a long-lived PyPI token.
+- Once a push to `main` passes CI, an unpublished project version is published and receives the
+  corresponding `vX.Y.Z` tag and GitHub Release. Manual workflow dispatch validates the build but
+  does not publish.
+- Keep `docs/release.md`, `build.py`, the release workflow, and
+  `tests/test_release_workflow.py` aligned when release behavior changes.
+
+## Change hygiene
+
+- Keep changes scoped and avoid modifying unrelated user work in a dirty worktree.
+- Do not commit secrets, local caches, generated GIFs, build artifacts, or machine-specific files.
+- Use clear commit messages and include tests and documentation in the same change when relevant.
+- Do not weaken CI, type checking, or lint rules merely to make a change pass.
