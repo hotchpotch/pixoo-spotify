@@ -9,6 +9,14 @@ Because the artwork is rendered at 64x64, it keeps the pixel art vibe crisp and 
   </div>
 </div>
 
+
+
+https://github.com/user-attachments/assets/b0999523-6a8b-48c7-a5b9-88008be070a0
+
+
+
+
+
 Divoom’s official app supports Spotify playback, but it does not show the artwork, so this project fills that gap.
 
 ## Install
