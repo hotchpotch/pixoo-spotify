@@ -79,14 +79,25 @@ http://127.0.0.1:8888/callback
 
 Copy the **Client ID**. You do not need a client secret.
 
-### 2. Authenticate
+### 2. Save the Client ID and authenticate
+
+Create a `.env` file in the directory where you will run pixoo-spotify:
+
+```dotenv
+SPOTIFY_CLIENT_ID=YOUR_CLIENT_ID
+```
+
+Then authenticate without repeating the Client ID on the command line:
 
 ```bash
-uvx pixoo-spotify auth --client-id "YOUR_CLIENT_ID"
+uvx pixoo-spotify auth
 ```
 
 A browser opens for approval. The Client ID and token are stored in your user config directory,
 so later commands don't need `--client-id`.
+
+Alternatively, skip `.env` and pass it directly with
+`uvx pixoo-spotify auth --client-id "YOUR_CLIENT_ID"`.
 
 > [!TIP]
 > If the browser redirect doesn't complete, the command also accepts the full redirected URL
@@ -309,11 +320,14 @@ Omit `--device-ip` on any of these and discovery is used instead.
 ## ⚙️ Configuration file
 
 `run` accepts TOML or JSON. A `config.toml` in the working directory is loaded automatically; use
-`--config` to point elsewhere. CLI options always win over file values.
+`--config` to point elsewhere. `auth` accepts the same option.
 
 ```toml
 poll_interval = 5
 idle_poll_interval = 20
+
+[spotify]
+client_id = "YOUR_CLIENT_ID"
 
 [pixoo]
 device_ip = "192.168.1.50"
@@ -340,6 +354,17 @@ log_format = "basic"
 uvx pixoo-spotify run --config ./config.toml
 ```
 
+Client ID sources use this precedence, from highest to lowest:
+
+1. `--client-id`
+2. `[spotify].client_id` in the selected TOML/JSON configuration
+3. An existing `SPOTIFY_CLIENT_ID` environment variable
+4. `SPOTIFY_CLIENT_ID` in `.env` in the working directory
+5. The Client ID cached by a previous successful `auth` command
+
+This makes TOML preferable for an explicit server configuration while `.env` remains convenient
+for a local checkout. Never commit `.env`.
+
 ---
 
 ## 📂 Where your data lives
@@ -349,7 +374,7 @@ repository. Don't commit `.env`, credentials, or token caches.
 
 | Data | File | Location |
 | --- | --- | --- |
-| Client ID | `auth_spotify_client.json` | config directory |
+| Cached Client ID | `auth_spotify_client.json` | config directory |
 | Spotify token | `spotify_token.json` | config directory |
 | Installed fonts | `fonts/` | config directory |
 | Latest GIF | `output/latest.gif` | config directory |

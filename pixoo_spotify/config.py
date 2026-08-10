@@ -241,12 +241,17 @@ class AppConfig(BaseModel):
     idle_poll_interval: float = Field(20.0, ge=5.0, le=300.0)
 
     @classmethod
-    def from_sources(cls, config_path: Path | None, overrides: dict[str, Any]) -> AppConfig:
-        base: dict[str, Any] = {}
+    def from_sources(
+        cls,
+        config_path: Path | None,
+        overrides: dict[str, Any],
+        defaults: dict[str, Any] | None = None,
+    ) -> AppConfig:
+        base: dict[str, Any] = defaults or {}
         if config_path:
             config_data = load_config_file(config_path)
             if config_data:
-                base = config_data
+                base = merge_dicts(base, config_data)
         merged = merge_dicts(base, overrides)
         return cls.model_validate(merged)
 

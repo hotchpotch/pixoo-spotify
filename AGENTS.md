@@ -9,7 +9,10 @@
 - CLI uses Typer. Non-background mode should show a small Rich UI panel (see `pixoo_spotify/ui.py`).
 - HTTP server uses `http.server` (ThreadingHTTPServer) to keep it lightweight.
 - Spotify auth uses PKCE (no client secret required). Default redirect is `http://127.0.0.1:8888/callback`.
-- `auth` requires `--client-id`; the value is cached under the platform config directory.
+- `auth` requires a Client ID from one of the supported sources and caches the resolved value under
+  the platform config directory.
+- `auth` and `run` resolve the Spotify Client ID in this order: CLI, TOML/JSON config, environment,
+  working-directory `.env`, then the platform config cache. Do not load `.env` values globally.
 - Config directory can be overridden with `--config-path` (global option).
 - For headless auth, set `--no-open-browser` and copy/paste the redirect URL.
 - Fonts live under the config directory (same location as auth files) in `fonts/`.
